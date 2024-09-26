@@ -11,3 +11,4 @@ def is_main_process():
 def main_print(*args, **kwargs):
     if is_main_process():
         print(*args, **kwargs)
+

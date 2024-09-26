@@ -1,18 +1,39 @@
-## Med-Eval
+# Med-Eval
 English | [日本語](README.ja.md) | [中文](README.zh.md)
-### Contributors
+## Contributors
 + Junfeng JIANG: [a412133593@gmail.com](mailto:a412133593@gmail.com)
 
-### Updates
+## Updates
 + 🎉 2024-08-18: All datasets have been uploaded to the Hugging Face Datasets Hub. You can find them in [Coldog2333/JMedBench](https://huggingface.co/datasets/Coldog2333/JMedBench).
 
+## Installation
+### Clone the repository
+```shell
+git clone https://github.com/nii-nlp/med-eval.git
+cd med-eval
+```
+
+### Create conda environment
+```shell
+conda create -n med-eval python=3.9
+```
+
 ### Preliminary
+#### PyTorch
+We recommend the following installation command for PyTorch since we only verify our codes with PyTorch 1.13.1 + CUDA 11.7. You can find more information on the [official website](https://pytorch.org/).
+```shell
+pip install torch==1.13.1+cu117 torchvision==0.14.1+cu117 torchaudio==0.13.1 --extra-index-url https://download.pytorch.org/whl/cu117
 ```
+#### Others
+```shell
+pip install -r requirements.txt
 pip install sacrebleu[ja]
+# rollback numpy to 1.X
+pip install numpy==1.26.4
 ```
 
 
-### Introduction
+## Introduction
 This is a submodule in the JMed-LLM repository, with a similar but more flexible framework as [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness).
 
 lm-evaluation-harness is a widely used library for evaluating language models, espscially on Multi-Choice Question Answering (MCQA) tasks, by computing conditional log-likelihoods for each option. However, it is not flexible enough to support the evaluation of models in many cases:
@@ -22,7 +43,7 @@ lm-evaluation-harness is a widely used library for evaluating language models, e
 
 Considering these issues, I developed this submodule to support the evaluation of models in a more flexible way.
 
-### Pipeline
+## Pipeline
 `EvaluationPipeline` is the core class in this submodule, which is used to evaluate models on different tasks. The pipeline consists of the following steps:
 1. Setup the environment, using single or multiple GPUs with PyTorch DDP.
 2. Load the model and tokenizer.
@@ -31,11 +52,11 @@ Considering these issues, I developed this submodule to support the evaluation o
 5. Collect the losses from all GPUs and compute the final metrics.
     + Since we use DDP, some requests will be computed for multiple times and the losses may not be the same due to the precision. Therefore, we average them as the final loss.
 
-### Prerequisites
+## Prerequisites
 + Inherit from the JMed-LLM repository
 
-### Instructions
-#### Supported tasks
+## Instructions
+### Supported tasks
 1. MCQA tasks
     + [x] `medmcqa`: MedMCQA
     + [x] `medmcqa_jp`: MedMCQA-JP
@@ -75,7 +96,7 @@ Considering these issues, I developed this submodule to support the evaluation o
 6. Semantic Text Similarity
     + [X] `jcsts`: Japanese Clinical Semantic Text Similarity
 
-#### Supported templates
+### Supported templates
 1. MCQA templates
     + [x] `mcqa`: Default template for MCQA tasks.
     + [x] `mcqa_with_options`: Template for MCQA tasks providing options explicitly.
@@ -93,7 +114,7 @@ Considering these issues, I developed this submodule to support the evaluation o
 * Other templates can be found in the `templates` module.
 
 
-#### How to do evaluation on defined tasks?
+### How to do evaluation on defined tasks?
 ```shell
 #!/bin/bash
 
@@ -128,15 +149,15 @@ torchrun --nproc_per_node=${N_GPU} \
             --use_knn_demo ${use_knn_demo}
 ```
 
-#### How to define a new task?
+### How to define a new task?
 1. Go to the `tasks/base.py` module.
 2. Define a function to load the dataset in a specific format.
    + output: Dict[str, List[MCQASample]]
    + MUST include "test" key. Optionally, you can include "train" keys for few-shot evaluation, or you could turn on `use_fake_demo` when running.
 
 
-### Appendix
-#### Statistics
+## Appendix
+### Statistics
 
 | MCQA              | #Train  | #Test | 
 |-------------------|---------|-------|
@@ -177,5 +198,5 @@ torchrun --nproc_per_node=${N_GPU} \
 | JCSTS        | -      | 3,670 |
 
 
-#### TODO
+### TODO
 + Summarization

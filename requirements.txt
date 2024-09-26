@@ -1,0 +1,7 @@
+ujson
+sacrebleu[ja]
+prettytable
+tqdm
+datasets==2.16.0
+transformers==4.38.0
+scipy

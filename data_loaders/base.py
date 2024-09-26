@@ -10,7 +10,11 @@ from tasks.ner import NERSample
 from tasks.mt import MTSample
 from tasks.nli import NLISample
 from tool_utils import main_print
-from config_file import DATA_ROOT_DIR
+
+try:
+    from config_file import DATA_ROOT_DIR
+except:
+    print("DATA_ROOT_DIR is not defined, so loading local data is not supported.")
 
 
 BENCHMARK_NAME = "Coldog2333/JMedBench"

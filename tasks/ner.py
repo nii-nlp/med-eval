@@ -52,7 +52,42 @@ class NERRequestDataset(RequestDataset):
         requests = []
         for i, sample in enumerate(self.samples):
             ## Instruction for the NER task
-            input_text = f"Please extract all {sample.entity_type.lower()}s mentioned in the paragraph.\n"
+            instantiated_sample =  self.instantiate_template(sample)
+            if self.template_name == "standard":
+                if "以下の" in instantiated_sample and "において" in instantiated_sample:
+                    input_text = ""
+                else:
+                    input_text = f"以下の段落において、{sample.entity_type}は？\n"
+
+            elif self.template_name == "minimal":
+                input_text = ""
+                if "以下の" in instantiated_sample and "において" in instantiated_sample:
+                    s_list = instantiated_sample.split("\n")
+                    instantiated_sample = "\n".join(s_list[1:])
+
+            elif self.template_name == "english-centric":
+                entity_jp2en = {
+                    "患者に実際に認められた病変や症状の存在を示す異常などの所見を表す表現": "Disease",
+                    "薬品にかかわる値": "Medicine Value",
+                    "薬品名": "Medicine Key",
+                    "遺伝子": "gene",
+                    "化学物質": "chemical",
+                    "疾患": "disease",
+                    "タンパク質、DNA、RNA、細胞株、または細胞タイプ": "protein, DNA, RNA, cell line, or cell type",
+                }
+                input_text = f"Please extract all {entity_jp2en[sample.entity_type].lower()}s mentioned in the paragraph.\n"
+                if "以下の" in instantiated_sample and "において" in instantiated_sample:
+                    s_list = instantiated_sample.split("\n")
+                    instantiated_sample = "\n".join(s_list[1:])
+            elif self.template_name == "instructed":
+                input_text = f"""あなたは医療分野の専門家です。\n
+                あなたは{sample.entity_type}のフレーズを含む段落を与えられます。\n
+                あなたのタスクは段落からこれらすべてのフレーズを抽出することです。\n
+                抽出されたフレーズのみを返し、それらを英語のカンマ（,）で区切る必要があります。\n"""
+                if "以下の" in instantiated_sample and "において" in instantiated_sample:
+                    s_list = instantiated_sample.split("\n")
+                    instantiated_sample = "\n".join(s_list[1:])
+            # input_text = f"Please extract all {sample.entity_type.lower()}s mentioned in the paragraph.\n"
 
             # Few-shot evaluation: In-context learning
             if self.num_fewshot > 0:
@@ -60,6 +95,7 @@ class NERRequestDataset(RequestDataset):
                 valid_few_shot_demos = []
                 for demo in few_shot_demos:
                     try:
+                        assert demo.labels
                         valid_few_shot_demos.append(self.instantiate_template(demo) + f" {', '.join(demo.labels)}")
                     except:
                         continue
@@ -72,7 +108,8 @@ class NERRequestDataset(RequestDataset):
             else:
                 pass
 
-            input_text += self.instantiate_template(sample)
+            # input_text += self.instantiate_template(sample)
+            input_text += instantiated_sample
 
             if first_sample_flag:
                 main_print(f'=====\n{input_text}\n-----\n{" {}".format(", ".join(sample.labels))}\n=====')

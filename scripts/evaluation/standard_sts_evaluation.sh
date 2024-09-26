@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BASE_PATH="/home/jiang/mainland/med-eval"
+BASE_PATH="/home/jiang/mainland/nii-nlp/med-eval"
 export PYTHONPATH=$BASE_PATH
 export TOKENIZERS_PARALLELISM=false
 
