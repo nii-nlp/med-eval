@@ -37,11 +37,62 @@ pip install numpy==1.26.4
 This is a submodule in the JMed-LLM repository, with a similar but more flexible framework as [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness).
 
 lm-evaluation-harness is a widely used library for evaluating language models, espscially on Multi-Choice Question Answering (MCQA) tasks, by computing conditional log-likelihoods for each option. However, it is not flexible enough to support the evaluation of models in many cases:
-1. When we want to evaluate one task with different templates (prompts), we need to modify the source code for each task.
-2. When we want to evaluate on a private task, it is hard to define.
-3. The version I was using doesn't support evaluation with multiple GPUs.
+1. When we want to evaluate one task with different templates (prompts), we need to modify the source codes for each task.
+2. When we want to evaluate on a local dataset, it is hard to define.
+3. The version we were using didn't support evaluation with multiple GPUs.
 
-Considering these issues, I developed this submodule to support the evaluation of models in a more flexible way.
+Considering these issues, we developed this submodule to support the evaluation of models in a more flexible way.
+
+
+## How to do evaluation on defined tasks?
+Here is an example of how to evaluate a model on the `MedMCQA` task with the `mcqa_with_options` template.
+```shell
+#!/bin/bash
+
+BASE_PATH="/home/jiang/mainland/med-eval"   # Change this to your own path
+export PYTHONPATH=$BASE_PATH
+export TOKENIZERS_PARALLELISM=false
+
+N_NODE=${1:-1}                              # Number of GPUs for evaluation
+MASTER_PORT=${10:-2333}
+
+model_name_or_path=${2:-"gpt2"}             # HF model name or checkpoint dir
+
+task=${3:-"medmcqa"}                        # example: medmcqa / medmcqa,pubmedqa (evaluate multiple tasks at the same time)
+template=${4:-"mcqa_with_options"}          # example: mcqa / mcqa_with_options,context_based_mcqa
+batch_size=${5:-32}
+num_fewshot=${6:-0}
+seed=${7:-42}
+model_max_length=${8:--1}
+
+torchrun --nproc_per_node=${N_GPU} \
+         --master_port $MASTER_PORT \
+          "${BASE_PATH}/evaluate_mcqa.py" \
+            --model_name_or_path ${model_name_or_path} \
+            --task ${task} \
+            --template_name ${template_name} \
+            --batch_size ${batch_size} \
+            --num_fewshot ${num_fewshot} \
+            --seed ${seed} \
+            --model_max_length ${model_max_length} \
+            --truncate False
+```
+
+### Quick evaluation on JMedBench
+We also implemented several scripts to evaluate models various supported tasks. You can find them in the `scripts/evaluation` directory.
+
+If you want to do evaluation on [JMedBench](https://huggingface.co/datasets/Coldog2333/JMedBench), you can use the following _one-line_ command:
+```shell
+bash scripts/evaluation/evaluate_jmedbench.sh ${model_name_or_path}
+```
+
+For example, if we want to evaluate Llama2-7B, we can use the following command:
+```shell
+bash scripts/evaluation/evaluate_jmedbench.sh "meta-llama/Llama-2-7b-hf"
+```
+
+After the evaluation, you could collect the results from the standard output.
+
 
 ## Pipeline
 `EvaluationPipeline` is the core class in this submodule, which is used to evaluate models on different tasks. The pipeline consists of the following steps:
@@ -114,40 +165,6 @@ Considering these issues, I developed this submodule to support the evaluation o
 * Other templates can be found in the `templates` module.
 
 
-### How to do evaluation on defined tasks?
-```shell
-#!/bin/bash
-
-BASE_PATH="/home/jiang/mainland/med-eval"   # Change this to your own path
-export PYTHONPATH=$BASE_PATH
-export TOKENIZERS_PARALLELISM=false
-
-N_NODE=${1:-1}                              # Number of GPUs for evaluation
-MASTER_PORT=${10:-2333}
-
-model_name_or_path=${2:-"gpt2"}             # HF model name or checkpoint dir
-
-task=${3:-"medmcqa"}                        # example: medmcqa / medmcqa,pubmedqa (evaluate multiple tasks at the same time)
-template=${4:-"mcqa_with_options"}          # example: mcqa / mcqa_with_options,context_based_mcqa
-batch_size=${5:-32}
-num_fewshot=${6:-0}
-seed=${7:-42}
-model_max_length=${8:--1}
-use_knn_demo=${9:-False}
-
-torchrun --nproc_per_node=${N_GPU} \
-         --master_port $MASTER_PORT \
-          "${BASE_PATH}/evaluate_mcqa.py" \
-            --model_name_or_path ${model_name_or_path} \
-            --task ${task} \
-            --template_name ${template_name} \
-            --batch_size ${batch_size} \
-            --num_fewshot ${num_fewshot} \
-            --seed ${seed} \
-            --model_max_length ${model_max_length} \
-            --truncate False \
-            --use_knn_demo ${use_knn_demo}
-```
 
 ### How to define a new task?
 1. Go to the `tasks/base.py` module.
