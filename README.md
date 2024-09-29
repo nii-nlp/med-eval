@@ -217,3 +217,17 @@ After the evaluation, you could collect the results from the standard output.
 
 ### TODO
 + Summarization
+
+## Citation
+If you find this code helpful for your research, please cite the following paper:
+```bibtex
+@misc{jiang2024jmedbenchbenchmarkevaluatingjapanese,
+      title={JMedBench: A Benchmark for Evaluating Japanese Biomedical Large Language Models}, 
+      author={Junfeng Jiang and Jiahao Huang and Akiko Aizawa},
+      year={2024},
+      eprint={2409.13317},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2409.13317}, 
+}
+```
