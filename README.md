@@ -7,31 +7,20 @@ English | [日本語](README.ja.md) | [中文](README.zh.md)
 + 🎉 2024-08-18: All datasets have been uploaded to the Hugging Face Datasets Hub. You can find them in [Coldog2333/JMedBench](https://huggingface.co/datasets/Coldog2333/JMedBench).
 
 ## Installation
-### Clone the repository
+### Supported environment
++ Python=3.9
++ Nvidia Driver >= 450.80.02* (for pytorch compiled with cuda11.7)
++ Git LFS isntalled
+
+### Clone the repository and install requrements
 ```shell
 git clone https://github.com/nii-nlp/med-eval.git
 cd med-eval
-```
-
-### Create conda environment
-```shell
-conda create -n med-eval python=3.9
-```
-
-### Preliminary
-#### PyTorch
-We recommend the following installation command for PyTorch since we only verify our codes with PyTorch 1.13.1 + CUDA 11.7. You can find more information on the [official website](https://pytorch.org/).
-```shell
-pip install torch==1.13.1+cu117 torchvision==0.14.1+cu117 torchaudio==0.13.1 --extra-index-url https://download.pytorch.org/whl/cu117
-```
-#### Others
-```shell
 pip install -r requirements.txt
-pip install sacrebleu[ja]
-# rollback numpy to 1.X
-pip install numpy==1.26.4
-```
+# git lfs install # Make sure you have git-lfs installed (https://git-lfs.com)
+git clone https://huggingface.co/datasets/Coldog2333/JMedBench data/JMedBench
 
+```
 
 ## Introduction
 This is a submodule in the JMed-LLM repository, with a similar but more flexible framework as [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness).
@@ -106,7 +95,7 @@ After the evaluation, you could collect the results from the standard output.
 ## Prerequisites
 + Inherit from the JMed-LLM repository
 
-## Instructions
+## Tasks and prompt templates
 ### Supported tasks
 1. MCQA tasks
     + [x] `medmcqa`: MedMCQA
@@ -116,10 +105,10 @@ After the evaluation, you could collect the results from the standard output.
     + [x] `medqa`: Med-QA (5 Options)
     + [x] `medqa_jp`: Med-QA-JP (5 Options)
     + [x] `pubmedqa`: PubMedQA
-    + [x] `pubmedqa_jp`: PubMedQA-JP [Zero-shot only]
-    + [x] `igakuqa`: IgakuQA (5-6 options) [Zero-shot only]
-    + [x] `igakuqa_en`: IgakuQA-EN (5-6 options) [Zero-shot only]
-    + [x] `mmlu`: MMLU
+    + [x] `pubmedqa_jp`: PubMedQA-JP
+    + [x] `igakuqa`: IgakuQA (5-6 options)
+    + [x] `igakuqa_en`: IgakuQA-EN (5-6 options)
+    + [x] `mmlu`: MMLU [Zero-shot only]
     + [x] `mmlu_medical`: MMLU-Medical
       + Some medical related subsets.
     + [x] `mmlu_medical_jp`: MMLU-Medical-JP
@@ -131,40 +120,38 @@ After the evaluation, you could collect the results from the standard output.
     + [X] `mrner_disease`: MRNER-Disease from JMED-LLM
     + [X] `mrner_medicine`: MRNER-Medicine from JMED-LLM
     + [X] `nrner`: NRNER from JMED-LLM
-    + [X] `bc2gm`: BC2GM from BLURB
-    + [X] `bc5chem`: BC5Chem from BLURB
-    + [X] `bc5disease`: BC5Disease from BLURB
-    + [X] `jnlpba`: JNLPBA from BLURB
-    + [X] `ncbi_disease`: NCBI-Disease from BLURB
-4. NLI tasks and Fact Verification tasks
-    + [X] `MediQA-RQE`
-    + [X] `PubHealth`
-    + [X] `HealthVer`
-5. Document Classification
+    + [X] `bc2gm_jp`: BC2GM from BLURB
+    + [X] `bc5chem_jp`: BC5Chem from BLURB
+    + [X] `bc5disease_jp`: BC5Disease from BLURB
+    + [X] `jnlpba_jp`: JNLPBA from BLURB
+    + [X] `ncbi_disease_jp`: NCBI-Disease from BLURB
+4. Document Classification
     + [X] `crade`
     + [X] `rrtnm`
     + [X] `smdis`
-6. Semantic Text Similarity
+5. Semantic Text Similarity
     + [X] `jcsts`: Japanese Clinical Semantic Text Similarity
 
-### Supported templates
-1. MCQA templates
-    + [x] `mcqa`: Default template for MCQA tasks.
-    + [x] `mcqa_with_options`: Template for MCQA tasks providing options explicitly.
-    + [x] `context_based_mcqa`: Default template for context-based MCQA tasks.
-2. MT templates
-3. NER templates
-4. NLI templates
-   + [X] `standard`: Default template for NLI tasks. Fact Verification tasks also share this template.
-5. DC templates
-   + [X] `mcqa_with_options`: DC task can be reformulated as MCQA task.
-6. STS templates
-   + [X] `sts_as_nli`: STS task can be reformulated as NLI task.
+### Supported prompt templates
+For each tasks, there are four prompt templates:
++ `Minimal`: Only display a question.
++ `Standard`: Display a question with a brief explanation in japanese.
++ `English Centric`: `standard` with english explanation.
++ `Instrcuted`: Display a question with a detail instuction in japanese.
 
 
-* Other templates can be found in the `templates` module.
+|Task|Minimal|Standard|English Centric|Instrcuted|
+|---|---|---|---|---|
+|MCQA (except `pubmedqa*`)|`mcqa_minimal`|`mcqa_with_options_jp`|`mcqa_with_options`|`4o_mcqa_instructed_jp`|
+|MCQA (`pubmedqa*`)|`context_based_mcqa`|`context_based_mcqa_minimal`|`context_based_mcqa_jp`|`context_based_mcqa_instructed_jp`|
+|MT (ja-en)|`mt_minimal`|`english_japanese`|`mt_english_centric_e2j`|`mt_instructed_e2j`|
+|MT (en-ja)|`mt_minimal`|`japanese_english`|`mt_english_centric_j2e`|`mt_instructed_j2e`|
+|NER|`minimal`|`standard`|`english-centric`|`instructed`|
+|DC|`context_based_mcqa_minimal`|`dc_with_options_jp`|`dc_with_options`|`dc_instructed_jp`|
+|STS|`sts_minimal`|`sts_as_nli_jp`|`sts_as_nli`|`sts_instructed_jp`|
 
-
+See `template` directory for details.<br>
+Other templates can be found in the `templates` module.
 
 ### How to define a new task?
 1. Go to the `tasks/base.py` module.
