@@ -19,8 +19,9 @@ cd med-eval
 pip install -r requirements.txt
 # git lfs install # Make sure you have git-lfs installed (https://git-lfs.com)
 git clone https://huggingface.co/datasets/Coldog2333/JMedBench data/JMedBench
-
 ```
+
++ Note: You need to change the setting in [config_file.py]() when you change the download path of JMedBench.
 
 ## Introduction
 This is a submodule in the JMed-LLM repository, with a similar but more flexible framework as [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness).
