@@ -1,14 +1,15 @@
 import argparse
+from collections import defaultdict
 import itertools
+from pathlib import  Path
 from typing import List
 import torch
-from prettytable import PrettyTable
 from tqdm import tqdm
 from distutils.util import strtobool
 from transformers import GenerationConfig
 import torch.distributed as dist
 
-from tool_utils import main_print, is_main_process
+from tool_utils import main_print, is_main_process, show_pretty_table, output_as_csv
 from tasks.ner import NERSample, NERRequestDataset
 from data_loaders.base import load_blurb, load_ner
 from data_utils import LMDataCollatorForGeneration
@@ -138,28 +139,29 @@ if __name__ == "__main__":
     parser.add_argument("--max_new_tokens", type=int, default=128)
 
     parser.add_argument("--truncate", type=strtobool, default=False)
+    parser.add_argument("--result_csv", type=str, default=None)
 
     args = parser.parse_args()
+    if args.result_csv is not None:
+        parent_path = Path(args.result_csv).parent.exists()
+        assert parent_path, f"{parent_path} does not exists. Cannot write output."
 
     pipeline = GenerationForNERPipeline(args)
 
     # load task
     tasks = args.task.split(",")
-    evaluation_results = {}
+    evaluation_results = defaultdict(lambda: defaultdict(dict))
     for task in tasks:
         samples = pipeline.load_downstream_task(dataset_name=task)
-
+        template_name=args.template_name
         evaluation_result = pipeline.evaluate(
             samples["test"],
             demo_samples=samples["train"],
             template_name=args.template_name
         )
 
-        evaluation_results[task] = evaluation_result
+        evaluation_results[task][template_name] = evaluation_result
 
-    tb = PrettyTable()
-    tb.field_names = ["Task", "F1 Entity-level"]
-    for task, result in evaluation_results.items():
-        tb.add_row([task, result["F1 Entity-level"]])
-
-    main_print(tb)
+    show_pretty_table(evaluation_results)
+    if args.result_csv:
+        output_as_csv(evaluation_results,args.result_csv)

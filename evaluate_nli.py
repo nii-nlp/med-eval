@@ -1,11 +1,12 @@
 import argparse
+from collections import defaultdict
 import copy
 import itertools
+from pathlib import  Path
 import random
 from typing import Union, List
 import ujson as json
 from distutils.util import strtobool
-from prettytable import PrettyTable
 import numpy as np
 import torch
 from torch import nn
@@ -15,7 +16,7 @@ import torch.distributed as dist
 import warnings
 warnings.filterwarnings("once")
 
-from tool_utils import is_main_process, main_print
+from tool_utils import is_main_process, show_pretty_table, output_as_csv
 from data_loaders.base import load_nli_samples
 from tasks.nli import NLIRequestDataset, NLISample
 from data_utils import LMDataCollatorForPerplexity
@@ -198,11 +199,16 @@ In default, we don't use this option, but use the exact demonstrations from the 
     parser.add_argument("--truncate", type=strtobool, default=False)
     parser.add_argument("--nli_labels", type=str, default="No,Yes")   # "No,Yes|No,Yes,Mixture,Unproven"
     parser.add_argument("--dump_file", type=str, default=None)
+    parser.add_argument("--result_csv", type=str, default=None)
+
 
     args = parser.parse_args()
 
     if args.model_max_length == -1:
         args.model_max_length = None
+    if args.result_csv is not None:
+        parent_path = Path(args.result_csv).parent.exists()
+        assert parent_path, f"{parent_path} does not exists. Cannot write output."
 
     pipeline = NLIEvaluationPipeline(args)
 
@@ -218,7 +224,7 @@ In default, we don't use this option, but use the exact demonstrations from the 
 
     assert len(tasks) == len(template_names) == len(nli_labels), f"Number of tasks/templates/nli_labels should be the same."
 
-    evaluation_results = {}
+    evaluation_results = defaultdict(lambda: defaultdict(dict))
     for task, template_name, label_set in zip(tasks, template_names, nli_labels):
         samples = pipeline.load_downstream_task(dataset_name=task)
         pipeline.init_verbalizer(label_set.split(","))
@@ -273,11 +279,8 @@ In default, we don't use this option, but use the exact demonstrations from the 
                 dump_file=args.dump_file
             )
 
-        evaluation_results[task] = evaluation_result
+        evaluation_results[task][template_name] = evaluation_result
 
-    tb = PrettyTable()
-    tb.field_names = ["Task", "Accuracy"]
-    for task, result in evaluation_results.items():
-        tb.add_row([task, result["accuracy"]])
-
-    main_print(tb)
+    show_pretty_table(evaluation_results)
+    if args.result_csv:
+        output_as_csv(evaluation_results,args.result_csv)

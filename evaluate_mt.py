@@ -1,15 +1,16 @@
 import argparse
+from collections import defaultdict
 import itertools
+from pathlib import  Path
 from typing import List
 import torch
 import torch.distributed as dist
-from prettytable import PrettyTable
 from tqdm import tqdm
 import unicodedata
 import sacrebleu
 
 
-from tool_utils import main_print, is_main_process
+from tool_utils import main_print, is_main_process, show_pretty_table, output_as_csv
 from data_loaders.base import load_ejmmt
 from tasks.mt import MTSample, MTRequestDataset
 from data_utils import LMDataCollatorForGeneration
@@ -137,12 +138,16 @@ if __name__ == "__main__":
 
     parser.add_argument("--translation", type=str, default="english=>japanese")
     parser.add_argument("--max_new_tokens", type=int, default=384)
+    parser.add_argument("--result_csv", type=str, default=None)
 
     args = parser.parse_args()
 
     tasks = args.task.split(",")
     translations = args.translation.split(",")
     templates = args.template_name.split(",")
+    if args.result_csv is not None:
+        parent_path = Path(args.result_csv).parent.exists()
+        assert parent_path, f"{parent_path} does not exists. Cannot write output."
 
     assert (len(tasks) == len(translations)) or (len(tasks) == 1 and len(translations) > 1)
 
@@ -152,7 +157,7 @@ if __name__ == "__main__":
     pipeline = GenerationForMTPipeline(args)
 
     all_bleus, all_tasks = [], []
-    evaluation_results = {}
+    evaluation_results = defaultdict(lambda: defaultdict(dict))
     for task, translation in zip(tasks, translations):
         source_lang, target_lang = translation.split("=>")
 
@@ -167,19 +172,11 @@ if __name__ == "__main__":
                 target_lang=target_lang
             )
 
-            evaluation_results[f"{task}-{template}"] = evaluation_result
+            evaluation_results[task][template] = evaluation_result
 
             # all_bleus.append(evaluation_results["bleu"])
             # all_tasks.append(f"{task} ({source_lang}=>{target_lang})")
 
-    tb = PrettyTable()
-    tb.field_names = ["Task", "Template", "BLEU"]
-
-    for key, result in evaluation_results.items():
-        task, template = key.split("-")
-        tb.add_row([task, template, result["bleu"]])
-    #
-    # for task, bleu in zip(all_tasks, all_bleus):
-    #     tb.add_row([task, bleu])
-
-    main_print(tb)
+    show_pretty_table(evaluation_results)
+    if args.result_csv:
+        output_as_csv(evaluation_results,args.result_csv)
