@@ -50,6 +50,6 @@ for task_type in "${task_types[@]}"; do
     for numshot in "${shot_sizes[@]}"; do
         _log_dir="$model_log_dir/$task_type-${numshot}shot"
         mkdir -p "$_log_dir"
-        bash "runs/all/${task_type}.sh" "$model_name_or_path" "$_log_dir" "$numshot" "$batch_size" "$n_gpus"
+        bash "scripts/run_all_template/${task_type}.sh" "$model_name_or_path" "$_log_dir" "$numshot" "$batch_size" "$n_gpus"
     done
 done
