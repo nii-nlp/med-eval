@@ -15,7 +15,7 @@ import torch.distributed as dist
 import warnings
 warnings.filterwarnings("once")
 
-from tool_utils import is_main_process, show_pretty_table, output_as_csv
+from tool_utils import is_main_process, main_print, show_pretty_table, output_as_csv
 from data_loaders.base import load_mcqa_samples
 from tasks.mcqa import MCQASample, MCQARequestDataset
 from data_utils import LMDataCollatorForPerplexity
@@ -49,7 +49,13 @@ class MCQAEvaluationPipeline(EvaluationPipeline):
         template_name: str = None,
         dump_file: str = None
     ):
-        dataset, dataloader = self.prepare_data(samples, demo_samples, template_name)
+        try:
+            dataset, dataloader = self.prepare_data(samples, demo_samples, template_name)
+        except AssertionError:
+            main_print("Skip this task due to the lack of samples for few-shot learning.")
+            return
+        except Exception as e:
+            raise e
 
         result_collection = []
 
@@ -248,7 +254,8 @@ In default, we don't use this option, but use the exact demonstrations from the 
                 template_name=template_name,
                 dump_file=args.dump_file
             )
-
+        if evaluation_result is None:
+            continue
         evaluation_results[task][template_name] = evaluation_result
 
     show_pretty_table(evaluation_results)
