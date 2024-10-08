@@ -1,1 +1,1 @@
-DATA_ROOT_DIR="data/JMedBench"
+DATA_ROOT_DIR="JMedBench"

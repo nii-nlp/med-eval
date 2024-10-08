@@ -18,7 +18,7 @@ git clone https://github.com/nii-nlp/med-eval.git
 cd med-eval
 pip install -r requirements.txt
 # git lfs install # Make sure you have git-lfs installed (https://git-lfs.com)
-git clone https://huggingface.co/datasets/Coldog2333/JMedBench data/JMedBench
+git clone https://huggingface.co/datasets/Coldog2333/JMedBench
 ```
 
 + Note: You need to change the setting in [config_file.py](config_file.py) when you change the download path of JMedBench.
