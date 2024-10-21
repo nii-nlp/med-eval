@@ -60,9 +60,9 @@ general_templates=(
     "4o_mcqa_instructed_jp"
 )
 pubmed_templates=(
-    "context_based_mcqa"
     "context_based_mcqa_minimal"
     "context_based_mcqa_jp"
+    "context_based_mcqa"
     "context_based_mcqa_instructed_jp"
 )
 
