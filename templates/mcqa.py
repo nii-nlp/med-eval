@@ -83,10 +83,13 @@ class MCQATemplate(Template):
         self.template = TEMPLATE_SET[template_name]
 
     def instantiate_template(self, sample):
+        if not isinstance(sample, dict):
+            sample = sample.to_dict()
+
         options = []
-        for i in range(sample.n_options):
+        for i in range(sample["n_options"]):
             option_idx = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[i]
-            option = sample.options[i]
+            option = sample["options"][i]
             # options.append(f"({option_idx}) {option}")
             options.append(f"{option_idx}. {option}")
         # option_text = " ".join(options)
@@ -94,25 +97,25 @@ class MCQATemplate(Template):
 
         if self.template_name in ["mcqa", "mcqa_minimal"]:
             return self.template.format(
-                question=sample.question
+                question=sample["question"]
             )
 
         elif self.template_name in ["mcqa_with_options", "mcqa_with_options_jp", "4o_mcqa_instructed", "4o_mcqa_instructed_jp"]:
             return self.template.format(
-                question=sample.question,
+                question=sample["question"],
                 options=option_text
             )
 
         elif self.template_name in ["context_based_mcqa", "context_based_mcqa_minimal", "context_based_mcqa_jp", "context_based_mcqa_instructed_jp"]:
             return self.template.format(
-                context=sample.metadata["context"],
-                question=sample.question
+                context=sample["metadata"]["context"],
+                question=sample["question"]
             )
 
         elif self.template_name in ["context_based_mcqa_with_options", "dc_with_options", "dc_with_options_jp", "dc_instructed_jp"]:
             return self.template.format(
-                context=sample.metadata["context"],
-                question=sample.question,
+                context=sample["metadata"]["context"],
+                question=sample["question"],
                 options=option_text
             )
 
@@ -120,4 +123,6 @@ class MCQATemplate(Template):
             raise NotImplementedError
 
     def instantiate_template_full(self, sample):
-        return self.instantiate_template(sample) + f" {sample.options[sample.answer_idx]}"
+        if not isinstance(sample, dict):
+            sample = sample.to_dict()
+        return self.instantiate_template(sample) + f' {sample["options"][sample["answer_idx"]]}'

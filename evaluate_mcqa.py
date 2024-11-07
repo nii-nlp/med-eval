@@ -224,21 +224,17 @@ In default, we don't use this option, but use the exact demonstrations from the 
             demo_samples = []
 
             if args.knn_data_file is not None:
-                knn_data_file = args.knn_data_file
+                with open(args.knn_data_file) as f:
+                    for line in f:
+                        indices = [int(index) for index in line.strip().split(",")][1:]
+                        demo_sample_list = []
+                        for i in range(args.num_fewshot):
+                            demo_sample_list.append(samples["train"][indices[i]])
+
+                        demo_samples.append(demo_sample_list)
+
             else:
-                knn_data_file = f"dataset/kate/{task}_kate.json"
-
-            with open(knn_data_file) as f:
-                json_data = json.load(f)
-
-            for i in range(len(json_data["test"])):
-                indices = copy.deepcopy(json_data["test"][i]["few_shot_indices"])
-                source = json_data["test"][i]["metadata"]["source"]
-                demo_sample_list = []
-                for index in indices:
-                    demo_sample_list.append(samples[source][index])
-
-                demo_samples.append(demo_sample_list)
+                raise ValueError("Please provide the KNN data file.")
 
             evaluation_result = pipeline.evaluate(
                 samples["test"],
