@@ -171,8 +171,9 @@ if __name__ == "__main__":
                 source_lang=source_lang,
                 target_lang=target_lang
             )
-
-            evaluation_results[task][template] = evaluation_result
+            translation_short = source_lang[:2] + "2" + target_lang[:2]
+            full_task_name = task + "-" + translation_short
+            evaluation_results[full_task_name][template] = evaluation_result
 
             # all_bleus.append(evaluation_results["bleu"])
             # all_tasks.append(f"{task} ({source_lang}=>{target_lang})")
