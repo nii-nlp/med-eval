@@ -21,18 +21,8 @@ log_dir="logs"
 n_gpus=$(nvidia-smi -L | wc -l)
 
 # Batch size settings for each task and shot setting
-task_shot_batch=(
-    "mcqa 0 4"
-    "mcqa 3 1"
-    "mt 0 12"
-    "mt 3 6"
-    "ner 0 5"
-    "ner 3 1"
-    "dc 0 7"
-    "dc 3 1"
-    "sts 0 23"
-    "sts 3 8"
-)
+tasks=("mcqa" "mt" "ner" "dc" "sts")
+shot_sizes=(0 3)
 
 # Prepare
 model_log_dir="$log_dir/$model_log_dirname"
@@ -42,17 +32,14 @@ if [ ! -d "$model_log_dir" ]; then
 fi
 
 # Main 
-for entry in "${task_shot_batch[@]}"; do
-    # Split the entry into task_type, shot, and batch_size
-    task_type=$(echo "$entry" | awk '{print $1}')
-    numshot=$(echo "$entry" | awk '{print $2}')
-    batch_size=$(echo "$entry" | awk '{print $3}')
+for _task in "${tasks[@]}"; do
+    for _shot in "${shot_sizes[@]}"; do
+        _log_dir="$model_log_dir/${_task}-${_shot}shot"
+        mkdir -p "$_log_dir"
 
-    _log_dir="$model_log_dir/$task_type-${numshot}shot"
-    mkdir -p "$_log_dir"
+        echo "Running $_task with ${_shot}-shot setting"
 
-    echo "Running $task_type with ${numshot}-shot setting using batch size: $batch_size"
-
-    # Execute the task-specific script with the corresponding batch size
-    bash "scripts/run_all_template/${task_type}.sh" "$model_name_or_path" "$_log_dir" "$numshot" "$batch_size" "$n_gpus"
+        # Execute the task-specific script with the corresponding batch size
+        bash "scripts/run_all_template/${_task}.sh" "$model_name_or_path" "$_log_dir" "$_shot"
+    done
 done

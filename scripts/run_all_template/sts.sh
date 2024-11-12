@@ -8,7 +8,6 @@
 #   model_name_or_path : The path or name (on Huggingface) of the model to evaluate.
 #   model_log_dir      : The directory where csv output result are saved.
 #   fewshot_size       : The number of few-shot examples to use for evaluation.
-#   batch_size         : The batch size for evaluation.
 #   N_GPUS (optional)  : The number of GPUs to use for distributed evaluation. Defaults to 1 if not specified.
 #
 # Example:
@@ -25,7 +24,6 @@ n_gpus_default=$(nvidia-smi -L | wc -l)
 model_name_or_path=$1
 model_log_dir=$2
 fewshot_size=${3:-1}
-batch_size=${4:-1}
 n_gpus=${5:-$n_gpus_default}
 
 # Semi-fixed variables
@@ -58,7 +56,6 @@ function torchrun_sts {
         --model_name_or_path "${model_name_or_path}" \
         --task "${joined_tasks}" \
         --template_name "${template}" \
-        --batch_size "${batch_size}" \
         --num_fewshot "${fewshot_size}" \
         --model_max_length "${model_max_length}" \
         --nli_labels "${NLI_LABELS}" \

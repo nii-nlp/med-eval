@@ -32,7 +32,7 @@ pip install -r requirements.txt
 
 #### Downloading datasets
 ```shell
-# git lfs install # Make sure you have git-lfs installed (https://git-lfs.com)
+git lfs install # Make sure you have git-lfs installed (https://git-lfs.com)
 git clone https://huggingface.co/datasets/Coldog2333/JMedBench
 ```
 + Note: You need to change the setting in [config_file.py](config_file.py) when you change the download path of JMedBench, if you want to use these datasets locally.

@@ -1,11 +1,10 @@
-from dataclasses import dataclass
-from transformers import PreTrainedTokenizer
-from typing import List
 import random
+from dataclasses import dataclass
+
+from transformers import PreTrainedTokenizer
 
 from tasks.base import RequestDataset
 from templates import MTTemplate
-from tool_utils import main_print
 
 
 @dataclass
@@ -19,8 +18,8 @@ class MTSample:
 class MTRequestDataset(RequestDataset):
     def __init__(
             self,
-            samples: List[MTSample],
-            demo_samples: List[MTSample] = None,
+            samples: list[MTSample],
+            demo_samples: list[MTSample] = None,
             tokenizer: PreTrainedTokenizer = None,
             template_name: str = "",
             num_fewshot: int = 0,
@@ -40,7 +39,7 @@ class MTRequestDataset(RequestDataset):
         self.template_f = MTTemplate
 
     def construct_requests(self):
-        main_print("Constructing requests...")
+        print("Constructing requests...")
         first_sample_flag = True
 
         requests = []
@@ -77,7 +76,7 @@ class MTRequestDataset(RequestDataset):
             input_text += self.instantiate_template(sample)
 
             if first_sample_flag:
-                main_print(f'=====\n{input_text}\n-----\n{" {}".format(sample.target_text)}\n=====')
+                print(f'=====\n{input_text}\n-----\n{" {}".format(sample.target_text)}\n=====')
                 first_sample_flag = False
 
             encodings = self.tokenizer(input_text)

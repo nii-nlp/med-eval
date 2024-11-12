@@ -1,30 +1,18 @@
-import random
-from dataclasses import dataclass
-from typing import List, Dict, Any, Union
 from torch.utils.data import Dataset
-from tqdm import tqdm
-from transformers import (
-    PreTrainedTokenizer,
-)
-
-import warnings
-# warnings.filterwarnings("once")
-
-from templates import MCQATemplate
-from tool_utils import main_print, is_main_process
+from transformers import PreTrainedTokenizer
 
 
 class RequestDataset(Dataset):
     def __init__(
-            self,
-            samples: List,
-            demo_samples: List = None,
-            tokenizer: PreTrainedTokenizer = None,
-            template_name: str = "",
-            num_fewshot: int = 0,
-            truncate: bool = False,
-            *args,
-            **kwargs
+        self,
+        samples: list,
+        demo_samples: list = None,
+        tokenizer: PreTrainedTokenizer = None,
+        template_name: str = "",
+        num_fewshot: int = 0,
+        truncate: bool = False,
+        *args,
+        **kwargs,
     ):
         self.samples = samples
         self.demo_samples = demo_samples if demo_samples is not None else []
@@ -32,7 +20,9 @@ class RequestDataset(Dataset):
         self.template_name = template_name
 
         self.num_fewshot = num_fewshot
-        assert self.num_fewshot == 0 or (self.num_fewshot > 0 and self.num_fewshot <= len(self.demo_samples)), f"{self.num_fewshot} {len(self.demo_samples)}"
+        assert self.num_fewshot == 0 or (
+            self.num_fewshot > 0 and self.num_fewshot <= len(self.demo_samples)
+        ), f"{self.num_fewshot} {len(self.demo_samples)}"
 
         self.tokenizer = tokenizer
         self.truncate = truncate
@@ -67,4 +57,3 @@ class RequestDataset(Dataset):
     @property
     def num_samples(self):
         return len(self.samples)
-

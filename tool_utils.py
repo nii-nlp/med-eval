@@ -1,18 +1,6 @@
-import os
-from prettytable import PrettyTable
 from typing import Any
 
-
-def is_main_process():
-    try:
-        return int(os.environ["LOCAL_RANK"]) == 0
-    except:
-        return True
-
-
-def main_print(*args, **kwargs):
-    if is_main_process():
-        print(*args, **kwargs)
+from prettytable import PrettyTable
 
 
 def show_pretty_table(evaluation_results: dict[str, dict[str, dict[str, Any]]]) -> None:
@@ -33,7 +21,7 @@ def show_pretty_table(evaluation_results: dict[str, dict[str, dict[str, Any]]]) 
     for task, template_result in evaluation_results.items():
         for template, result in template_result.items():
             tb.add_row([task, template] + [result[m] for m in metrics])
-    main_print(tb)
+    print(tb)
 
 
 def output_as_csv(

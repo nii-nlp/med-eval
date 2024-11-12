@@ -1,35 +1,27 @@
-import random
-import datasets
+import json
 import os
-import ujson as json
-from typing import List, Dict
+
 from datasets import load_dataset
 
+from config_file import DATA_ROOT_DIR
 from tasks.mcqa import MCQASample
-from tasks.ner import NERSample
 from tasks.mt import MTSample
+from tasks.ner import NERSample
 from tasks.nli import NLISample
-from tool_utils import main_print
-
-try:
-    from config_file import DATA_ROOT_DIR
-except:
-    print("DATA_ROOT_DIR is not defined, so loading local data is not supported.")
-
 
 BENCHMARK_NAME = "Coldog2333/JMedBench"
 
 
-def load_mcqa_samples(dataset_name: str) -> Dict[str, List[MCQASample]]:
+def load_mcqa_samples(dataset_name: str) -> dict[str, list[MCQASample]]:
 
-    mcqa_samples = {"train": [], "test": []}
+    mcqa_samples = {"train": [], "validation": [], "test": []}
 
     # try to load from huggingface firstly
     try:
-        main_print(f"Try loading {dataset_name} dataset from Hugging Face...")
+        print(f"Try loading {dataset_name} dataset from Hugging Face...")
         dataset = load_dataset(BENCHMARK_NAME, dataset_name)
 
-        for split in ["train", "test"]:
+        for split in ["train", "validation", "test"]:
             if split in dataset.keys():
                 for sample in dataset[split]:
                     mcqa_samples[split].append(
@@ -39,19 +31,19 @@ def load_mcqa_samples(dataset_name: str) -> Dict[str, List[MCQASample]]:
                             options=sample["options"],
                             answer_idx=sample["answer_idx"],
                             n_options=sample["n_options"],
-                            metadata=sample["metadata"]
+                            metadata=sample["metadata"],
                         )
                     )
 
     except:
 
-        main_print(f"Loading {dataset_name} dataset from local file...")
+        print(f"Loading {dataset_name} dataset from local file...")
 
-        for split in ["train", "test"]:
+        for split in ["train", "validation", "test"]:
             data_filename = os.path.join(DATA_ROOT_DIR, f"{dataset_name}/{split}.jsonl")
             if os.path.exists(data_filename):
 
-                with open(data_filename, "r", encoding='utf-8') as f:
+                with open(data_filename, "r", encoding="utf-8") as f:
                     for line in f:
                         sample = json.loads(line)
                         mcqa_samples[split].append(
@@ -61,28 +53,29 @@ def load_mcqa_samples(dataset_name: str) -> Dict[str, List[MCQASample]]:
                                 options=sample["options"],
                                 answer_idx=sample["answer_idx"],
                                 n_options=sample["n_options"],
-                                metadata=sample["metadata"]
+                                metadata=sample["metadata"],
                             )
                         )
 
             else:
-                main_print(f"File {data_filename} does not exist.")
+                print(f"File {data_filename} does not exist.")
 
-    main_print(f"Loaded {len(mcqa_samples['test'])} samples for testing set.")
-    main_print(f"Loaded {len(mcqa_samples['train'])} samples for training set.")
+    print(f"Loaded {len(mcqa_samples['test'])} samples for testing set.")
+    print(f"Loaded {len(mcqa_samples['validation'])} samples for validation set.")
+    print(f"Loaded {len(mcqa_samples['train'])} samples for training set.")
 
     return mcqa_samples
 
 
-def load_nli_samples(dataset_name: str) -> Dict[str, List[NLISample]]:
+def load_nli_samples(dataset_name: str) -> dict[str, list[NLISample]]:
 
-    nli_samples = {"train": [], "test": []}
+    nli_samples = {"train": [], "validation": [], "test": []}
 
     # try to load from huggingface firstly
     try:
-        main_print(f"Try loading {dataset_name} dataset from Hugging Face...")
+        print(f"Try loading {dataset_name} dataset from Hugging Face...")
         dataset = load_dataset(BENCHMARK_NAME, dataset_name)
-        for split in ["train", "test"]:
+        for split in ["train", "validation", "test"]:
             if split in dataset.keys():
                 for sample in dataset[split]:
                     nli_samples[split].append(
@@ -92,18 +85,18 @@ def load_nli_samples(dataset_name: str) -> Dict[str, List[NLISample]]:
                             hypothesis=sample["hypothesis"],
                             label=sample["label"],
                             n_label=sample["n_label"],
-                            metadata=sample["metadata"]
+                            metadata=sample["metadata"],
                         )
                     )
 
     except:
 
-        main_print(f"Loading {dataset_name} dataset from local file...")
+        print(f"Loading {dataset_name} dataset from local file...")
 
-        for split in ["train", "test"]:
+        for split in ["train", "validation", "test"]:
             data_filename = os.path.join(DATA_ROOT_DIR, f"{dataset_name}/{split}.jsonl")
             if os.path.exists(data_filename):
-                with open(data_filename, "r", encoding='utf-8') as f:
+                with open(data_filename, "r", encoding="utf-8") as f:
                     for line in f:
                         sample = json.loads(line)
                         nli_samples[split].append(
@@ -113,22 +106,23 @@ def load_nli_samples(dataset_name: str) -> Dict[str, List[NLISample]]:
                                 hypothesis=sample["hypothesis"],
                                 label=sample["label"],
                                 n_label=sample["n_label"],
-                                metadata=sample["metadata"]
+                                metadata=sample["metadata"],
                             )
                         )
 
-    main_print(f"Loaded {len(nli_samples['test'])} samples for testing set.")
-    main_print(f"Loaded {len(nli_samples['train'])} samples for training set.")
+    print(f"Loaded {len(nli_samples['test'])} samples for testing set.")
+    print(f"Loaded {len(nli_samples['validation'])} samples for validation set.")
+    print(f"Loaded {len(nli_samples['train'])} samples for training set.")
 
     return nli_samples
 
 
-def load_ner(dataset_name: str) -> Dict[str, List[NERSample]]:
+def load_ner(dataset_name: str) -> dict[str, list[NERSample]]:
     ner_samples = {"train": [], "test": [], "validation": []}
 
     # try to load from huggingface firstly
     try:
-        main_print(f"Try loading {dataset_name} dataset from Hugging Face...")
+        print(f"Try loading {dataset_name} dataset from Hugging Face...")
         dataset = load_dataset(BENCHMARK_NAME, dataset_name)
         for split in ["train", "validation", "test"]:
             if split in dataset.keys():
@@ -137,31 +131,31 @@ def load_ner(dataset_name: str) -> Dict[str, List[NERSample]]:
                         NERSample(
                             text=sample["text"],
                             labels=sample["labels"],
-                            entity_type=sample["entity_type"]
+                            entity_type=sample["entity_type"],
                         )
                     )
 
     except:
 
-        main_print(f"Loading {dataset_name} dataset from local file...")
+        print(f"Loading {dataset_name} dataset from local file...")
 
-        for split in ["train", "test"]:
+        for split in ["train", "validation", "test"]:
             data_filename = os.path.join(DATA_ROOT_DIR, f"{dataset_name}/{split}.jsonl")
             if os.path.exists(data_filename):
-                with open(data_filename, "r", encoding='utf-8') as f:
+                with open(data_filename, "r", encoding="utf-8") as f:
                     for line in f:
                         sample = json.loads(line)
                         ner_samples[split].append(
                             NERSample(
                                 text=sample["text"],
                                 labels=sample["labels"],
-                                entity_type=sample["entity_type"]
+                                entity_type=sample["entity_type"],
                             )
                         )
 
-    main_print(f"Loaded {len(ner_samples['test'])} samples for testing set.")
-    main_print(f"Loaded {len(ner_samples['train'])} samples for training set.")
-    main_print(f"Loaded {len(ner_samples['validation'])} samples for validation set.")
+    print(f"Loaded {len(ner_samples['test'])} samples for testing set.")
+    print(f"Loaded {len(ner_samples['train'])} samples for training set.")
+    print(f"Loaded {len(ner_samples['validation'])} samples for validation set.")
 
     return ner_samples
 
@@ -171,7 +165,7 @@ def load_blurb(subset_name):
     :param subset_name: Options: "bc2gm", "bc5chem", "bc5disease", "jnlpba", "ncbi_disease"
     :return:
     """
-    dataset = load_dataset('bigbio/blurb', subset_name)
+    dataset = load_dataset("bigbio/blurb", subset_name)
     ner_samples = {"train": [], "test": [], "validation": []}
     for split in dataset.keys():
         for sample in dataset[split]:
@@ -203,33 +197,27 @@ def load_blurb(subset_name):
                 labels = ["none"]
 
             ner_samples[split].append(
-                NERSample(
-                    text=text,
-                    labels=labels,
-                    entity_type=sample["type"]
-                )
+                NERSample(text=text, labels=labels, entity_type=sample["type"])
             )
 
-    main_print(f"Loaded {len(ner_samples['test'])} samples for testing set.")
-    main_print(f"Loaded {len(ner_samples['train'])} samples for training set.")
-    main_print(f"Loaded {len(ner_samples['validation'])} samples for validation set.")
+    print(f"Loaded {len(ner_samples['test'])} samples for testing set.")
+    print(f"Loaded {len(ner_samples['train'])} samples for training set.")
+    print(f"Loaded {len(ner_samples['validation'])} samples for validation set.")
 
     return ner_samples
-
-
 
 
 def load_ejmmt(
     dataset_name="ejmmt",
     source_lang="english",
     target_lang="japanese",
-) -> Dict[str, List[MTSample]]:
+) -> dict[str, list[MTSample]]:
 
     mt_samples = {"train": [], "test": [], "validation": []}
 
     # try to load from huggingface firstly
     try:
-        main_print(f"Try loading {dataset_name} dataset from Hugging Face...")
+        print(f"Try loading {dataset_name} dataset from Hugging Face...")
         dataset = load_dataset(BENCHMARK_NAME, dataset_name)
         for split in ["train", "test", "validation"]:
             if split in dataset.keys():
@@ -239,18 +227,18 @@ def load_ejmmt(
                             source_text=sample[source_lang],
                             target_text=sample[target_lang],
                             source_language=source_lang,
-                            target_language=target_lang
+                            target_language=target_lang,
                         )
                     )
 
     except:
 
-        main_print(f"Loading {dataset_name} dataset from local file...")
+        print(f"Loading {dataset_name} dataset from local file...")
 
         for split in ["train", "test", "validation"]:
             data_filename = os.path.join(DATA_ROOT_DIR, f"{dataset_name}/{split}.jsonl")
             if os.path.exists(data_filename):
-                with open(data_filename, "r", encoding='utf-8') as f:
+                with open(data_filename, "r", encoding="utf-8") as f:
                     for line in f:
                         sample = json.loads(line)
                         mt_samples[split].append(
@@ -258,14 +246,14 @@ def load_ejmmt(
                                 source_text=sample[source_lang],
                                 target_text=sample[target_lang],
                                 source_language=source_lang,
-                                target_language=target_lang
+                                target_language=target_lang,
                             )
                         )
 
             else:
-                main_print(f"File {data_filename} does not exist.")
+                print(f"File {data_filename} does not exist.")
 
-    main_print(f"Loaded {len(mt_samples['test'])} samples for testing set.")
+    print(f"Loaded {len(mt_samples['test'])} samples for testing set.")
 
     return mt_samples
 

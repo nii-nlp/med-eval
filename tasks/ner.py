@@ -1,17 +1,16 @@
-from dataclasses import dataclass
-from typing import List
-from transformers import PreTrainedTokenizer
 import random
+from dataclasses import dataclass
 
-from templates import NERTemplate
+from transformers import PreTrainedTokenizer
+
 from tasks.base import RequestDataset
-from tool_utils import main_print
+from templates import NERTemplate
 
 
 @dataclass
 class NERSample:
     text: str
-    labels: List[str]
+    labels: list[str]
     entity_type: str = None
 
     def to_dict(self):
@@ -25,8 +24,8 @@ class NERSample:
 class NERRequestDataset(RequestDataset):
     def __init__(
             self,
-            samples: List[NERSample],
-            demo_samples: List[NERSample] = None,
+            samples: list[NERSample],
+            demo_samples: list[NERSample] = None,
             tokenizer: PreTrainedTokenizer = None,
             template_name: str = "standard",
             num_fewshot: int = 0,
@@ -46,7 +45,7 @@ class NERRequestDataset(RequestDataset):
         self.template_f = NERTemplate
 
     def construct_requests(self):
-        main_print("Constructing requests...")
+        print("Constructing requests...")
         first_sample_flag = True
 
         requests = []
@@ -112,7 +111,7 @@ class NERRequestDataset(RequestDataset):
             input_text += instantiated_sample
 
             if first_sample_flag:
-                main_print(f'=====\n{input_text}\n-----\n{" {}".format(", ".join(sample.labels))}\n=====')
+                print(f'=====\n{input_text}\n-----\n{" {}".format(", ".join(sample.labels))}\n=====')
                 first_sample_flag = False
 
             encodings = self.tokenizer(input_text)
