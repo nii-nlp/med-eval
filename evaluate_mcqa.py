@@ -1,6 +1,7 @@
 import argparse
 import copy
 import json
+import logging
 import random
 import warnings
 from collections import defaultdict
@@ -15,6 +16,9 @@ from data_loaders.base import load_mcqa_samples
 from pipeline import EvaluationPipeline
 from tasks.mcqa import MCQARequestDataset, MCQASample
 from tool_utils import output_as_csv, show_pretty_table
+
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+logger = logging.getLogger(__name__)
 
 
 class MCQAEvaluationPipeline(EvaluationPipeline):
@@ -60,7 +64,7 @@ class MCQAEvaluationPipeline(EvaluationPipeline):
             )
 
         except AssertionError:
-            print("Skip this task due to the lack of samples for few-shot learning.")
+            logger.warning("Skip this task due to the lack of samples for few-shot learning.")
             return
         except Exception as e:
             raise e
@@ -69,11 +73,11 @@ class MCQAEvaluationPipeline(EvaluationPipeline):
 
         prompt_token_ids = [dataset[j]["input_ids"] for j in range(len(dataset))]
         with torch.inference_mode():
-            losses = self._loglikelihood_batch(prompt_token_ids)
+            logprobs = self._loglikelihood_batch(prompt_token_ids)
 
-        for i in range(len(losses)):
+        for i in range(len(logprobs)):
             is_target_outputs = np.array(dataset[i]["labels"][1:]) != -100
-            target_loss = np.where(is_target_outputs, losses[i], 0).sum()
+            target_loss = -np.where(is_target_outputs, logprobs[i], 0).sum()
             result_collection.append(
                 (
                     dataset[i]["request_id"],
@@ -219,6 +223,10 @@ if __name__ == "__main__":
                     demo_samples.append(demo_sample_list)
         else:
             demo_samples = samples["train"]
+
+        if len(samples[args.data_type]) == 0:
+            logger.warning("Skip this task due to the lack of samples.")
+            continue
 
         evaluation_result = pipeline.evaluate(
             samples[args.data_type],

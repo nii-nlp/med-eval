@@ -1,5 +1,5 @@
+import logging
 import random
-import warnings
 from dataclasses import dataclass
 
 from tqdm import tqdm
@@ -7,6 +7,10 @@ from transformers import PreTrainedTokenizer
 
 from tasks.base import RequestDataset
 from templates import MCQATemplate
+
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+logger = logging.getLogger(__name__)
+
 
 SUPPORTING_TASKS = ["igakuqa", "igakuqa_en", "medmcqa"]
 
@@ -35,7 +39,7 @@ class MCQASample:
         for option in self.options:
             # assert option != "", f"Empty option in {self}"
             if option == "":
-                print(f"Empty option in {self}")
+                logger.warning(f"Empty option in {self}")
 
         # shuffle options
         # answer = self.options[self.answer_idx]
@@ -141,9 +145,9 @@ class MCQARequestDataset(RequestDataset):
                     [len(output_token_ids) for output_token_ids in all_output_token_ids]
                 )
             except ValueError:
-                print(all_output_token_ids)
-                print(sample)
-                warnings.warn(f"max() arg is an empty sequence")
+                logger.debug(all_output_token_ids)
+                logger.debug(sample)
+                logger.warning(f"max() arg is an empty sequence")
                 exit(1)
 
             max_n_length_of_input = (
@@ -153,11 +157,11 @@ class MCQARequestDataset(RequestDataset):
             for j, output_token_ids in enumerate(all_output_token_ids):
                 if len(input_token_ids) > max_n_length_of_input:
                     if self.truncate:
-                        warnings.warn(
+                        logger.warning(
                             f"Input text is too long: {len(input_token_ids)}. It is truncated now."
                         )
                     else:
-                        warnings.warn(
+                        logger.warning(
                             f"Just a reminder, input text is too long: {len(input_token_ids)}."
                         )
 
@@ -272,7 +276,7 @@ class MCQARequestDataset(RequestDataset):
 
             for j, output_token_ids in enumerate(all_output_token_ids):
                 if len(input_token_ids) > max_n_length_of_input:
-                    warnings.warn(
+                    logger.warning(
                         f"Input text is too long: {len(input_token_ids)}. It is truncated now."
                     )
                 input_token_ids = input_token_ids[-max_n_length_of_input:]

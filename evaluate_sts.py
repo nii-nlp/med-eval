@@ -64,11 +64,11 @@ class STSEvaluationPipeline(EvaluationPipeline):
         result_collection = []
         prompt_token_ids = [dataset[j]["input_ids"] for j in range(len(dataset))]
         with torch.inference_mode():
-            losses = self._loglikelihood_batch(prompt_token_ids)
+            logprobs = self._loglikelihood_batch(prompt_token_ids)
 
-            for i in range(len(losses)):
+            for i in range(len(logprobs)):
                 is_target_outputs = np.array(dataset[i]["labels"][1:]) != -100
-                target_loss = np.where(is_target_outputs, losses[i], 0).sum()
+                target_loss = -np.where(is_target_outputs, logprobs[i], 0).sum()
                 result_collection.append(
                     (
                         dataset[i]["request_id"],

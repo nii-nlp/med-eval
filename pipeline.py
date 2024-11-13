@@ -39,7 +39,7 @@ class EvaluationPipeline:
         self.model = LLM(
             model_name_or_path,
             dtype="bfloat16",
-            gpu_memory_utilization=0.6,
+            gpu_memory_utilization=0.5,
             tensor_parallel_size=1,
         )
         self.model.set_tokenizer(self.tokenizer)
