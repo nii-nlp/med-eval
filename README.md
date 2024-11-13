@@ -8,8 +8,8 @@ English | [日本語](README.ja.md) | [中文](README.zh.md)
 
 ## Installation
 ### Supported environment
-+ Python=3.9
-+ Nvidia Driver >= 450.80.02* (for pytorch compiled with cuda11.7)
++ Python=3.11
++ Nvidia Driver >= 530.30.02 (for pytorch compiled with cuda12.1)
 + Git LFS installed
 
 ### Clone this repository
@@ -19,13 +19,6 @@ cd med-eval
 ```
 
 ### Preliminary
-#### PyTorch
-We recommend the following installation command for PyTorch since we only verify our codes with PyTorch 1.13.1 + CUDA 11.7. You can find more information on the [official website](https://pytorch.org/).
-```shell
-pip install torch==1.13.1+cu117 torchvision==0.14.1+cu117 torchaudio==0.13.1 --extra-index-url https://download.pytorch.org/whl/cu117
-```
-
-#### Others
 ```shell
 pip install -r requirements.txt
 ```
@@ -53,32 +46,20 @@ Here is an example of how to evaluate a model on the `MedMCQA` task with the `mc
 ```shell
 #!/bin/bash
 
-BASE_PATH="/home/jiang/mainland/med-eval"   # Change this to your own path
-export PYTHONPATH=$BASE_PATH
-export TOKENIZERS_PARALLELISM=false
-
-N_NODE=${1:-1}                              # Number of GPUs for evaluation
-MASTER_PORT=${10:-2333}
-
 model_name_or_path=${2:-"gpt2"}             # HF model name or checkpoint dir
-
 task=${3:-"medmcqa"}                        # example: medmcqa / medmcqa,pubmedqa (evaluate multiple tasks at the same time)
 template=${4:-"mcqa_with_options"}          # example: mcqa / mcqa_with_options,context_based_mcqa
 batch_size=${5:-32}
 num_fewshot=${6:-0}
 seed=${7:-42}
-model_max_length=${8:--1}
 
-torchrun --nproc_per_node=${N_GPU} \
-         --master_port $MASTER_PORT \
-          "${BASE_PATH}/evaluate_mcqa.py" \
+python "${BASE_PATH}/evaluate_mcqa.py" \
             --model_name_or_path ${model_name_or_path} \
             --task ${task} \
             --template_name ${template_name} \
             --batch_size ${batch_size} \
             --num_fewshot ${num_fewshot} \
             --seed ${seed} \
-            --model_max_length ${model_max_length} \
             --truncate False
 ```
 
