@@ -1,30 +1,26 @@
 #!/bin/bash
-# This script evaluates machine translation models on various translation tasks using torchrun for distributed evaluation.
+# This script evaluates machine translation models on various translation tasks.
 #
 # Usage:
-# ./evaluate_mt.sh <model_name_or_path> <numshot> <batch_size> [<N_GPUS>]
+# ./evaluate_mt.sh <model_name_or_path> <numshot>
 #
 # Arguments:
 #   model_name_or_path : The path or name (on Huggingface) of the model to evaluate.
 #   model_log_dir      : The directory where csv output result are saved.
 #   fewshot_size       : The number of few-shot examples to use for evaluation.
-#   N_GPUS (optional)  : The number of GPUs to use for distributed evaluation. Defaults to 1 if not specified.
 #
 # Example:
-#   ./evaluate_mt.sh my_model 5 16 2
-#   This will evaluate the model 'my_model' using 5-shot examples, a batch size of 16, and 2 GPUs.
+#   ./evaluate_mt.sh my_model 5
+#   This will evaluate the model 'my_model' using 5-shot examples.
 #
 # Tasks:
 # This script supports the following tasks:
 #  ejmmt (English-Japanese and Japanese-English translation tasks)
 
-n_gpus_default=$(nvidia-smi -L | wc -l)
-
 # Arguments
 model_name_or_path=$1
 model_log_dir=$2
-fewshot_size=${3:-1}
-n_gpus=${5:-$n_gpus_default}
+fewshot_size=${3:-0}
 
 # Semi-fixed variables
 max_new_tokens=256
@@ -44,17 +40,14 @@ ejmmt_ja2en_template=(
     "mt_instructed_j2e"
 )
 
-export TOKENIZERS_PARALLELISM=false
-
 # Function to run torchrun for MT tasks
-function torchrun_mt {
+function run_mt {
     task=$1
     translation=$2
     template=$3
     log_file=$4
 
-    torchrun --nproc_per_node="${n_gpus}" \
-        evaluate_mt.py \
+    python evaluate_mt.py \
         --model_name_or_path "${model_name_or_path}" \
         --task "${task}" \
         --template_name "${template}" \
@@ -72,8 +65,8 @@ fi
 
 # Main loop
 for _template in "${ejmmt_en2ja_template[@]}"; do
-    torchrun_mt "ejmmt" 'english=>japanese' "$_template" "$model_log_dir/ejmmt_e2j-${_template}.csv"
+    run_mt "ejmmt" 'english-japanese' "$_template" "$model_log_dir/ejmmt_e2j-${_template}.csv"
 done
 for _template in "${ejmmt_ja2en_template[@]}"; do
-    torchrun_mt "ejmmt" 'japanese=>english' "$_template" "$model_log_dir/ejmmt_j2e-${_template}.csv"
+    run_mt "ejmmt" 'japanese-english' "$_template" "$model_log_dir/ejmmt_j2e-${_template}.csv"
 done

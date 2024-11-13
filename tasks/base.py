@@ -22,7 +22,7 @@ class RequestDataset(Dataset):
         self.num_fewshot = num_fewshot
         assert self.num_fewshot == 0 or (
             self.num_fewshot > 0 and self.num_fewshot <= len(self.demo_samples)
-        ), f"{self.num_fewshot} {len(self.demo_samples)}"
+        ), f"{self.num_fewshot=} is larger than {len(self.demo_samples)=}"
 
         self.tokenizer = tokenizer
         self.truncate = truncate

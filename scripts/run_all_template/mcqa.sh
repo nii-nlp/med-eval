@@ -1,18 +1,17 @@
 #!/bin/bash
-# This script evaluates multiple-choice QA models on various medical and scientific QA tasks using torchrun for distributed evaluation.
+# This script evaluates multiple-choice QA models on various medical and scientific QA tasks.
 #
 # Usage:
-# ./evaluate_mcqa.sh <model_name_or_path> <example_size> <batch_size> [<N_GPUS>]
+# bash scripts/run_all_template/evaluate_mcqa.sh <model_name_or_path> <example_size>
 #
 # Arguments:
 #   model_name_or_path : The path or name (on Huggingface) of the model to evaluate.
 #   model_log_dir      : The directory where csv output result are saved.
 #   fewshot_size       : The number of few-shot examples to use for evaluation.
-#   N_GPUS (optional)  : The number of GPUs to use for distributed evaluation. Defaults to 1 if not specified.
 #
 # Example:
-#   ./evaluate_mcqa.sh my_model 5 16 2
-#   This will evaluate the model 'my_model' using 5-shot examples, a batch size of 16, and 2 GPUs.
+#   bash scripts/run_all_template/evaluate_mcqa.sh my_model 5
+#   This will evaluate the model 'my_model' using 5-shot examples.
 #
 # Tasks:
 # This script supports the following tasks:
@@ -22,10 +21,7 @@
 # Arguments
 model_name_or_path=$1
 model_log_dir=$2
-fewshot_size=${3:-1}
-
-# Semi-fixed variables
-model_max_length=-1
+fewshot_size=${3:-0}
 
 # Fixed variables
 general_tasks=(
@@ -61,9 +57,7 @@ pubmed_templates=(
     "context_based_mcqa_instructed_jp"
 )
 
-export TOKENIZERS_PARALLELISM=false
-
-function torchrun_mcqa {
+function run_mcqa {
     joined_tasks=$1
     template=$2
     log_file=$3
@@ -73,7 +67,6 @@ function torchrun_mcqa {
         --task "${joined_tasks}" \
         --template_name "${template}" \
         --num_fewshot "${fewshot_size}" \
-        --model_max_length "${model_max_length}" \
         --result_csv "$log_file"
 }
 
@@ -90,8 +83,8 @@ if [ ! -d "$model_log_dir" ] ;then
 fi
 
 for _template in "${general_templates[@]}"; do
-    torchrun_mcqa "$joined_general_tasks" "$_template" "${model_log_dir}/all_except_pubmed-${_template}.csv"
+    run_mcqa "$joined_general_tasks" "$_template" "${model_log_dir}/all_except_pubmed-${_template}.csv"
 done
 for _template in "${pubmed_templates[@]}"; do
-    torchrun_mcqa "$joined_pubmed_tasks" "$_template" "$model_log_dir/pubmed-${_template}.csv"
+    run_mcqa "$joined_pubmed_tasks" "$_template" "$model_log_dir/pubmed-${_template}.csv"
 done

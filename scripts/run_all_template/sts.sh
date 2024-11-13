@@ -1,33 +1,28 @@
 #!/bin/bash
-# This script evaluates models on Semantic Textual Similarity (STS) tasks using torchrun for distributed evaluation.
+# This script evaluates models on Semantic Textual Similarity (STS) tasks.
 #
 # Usage:
-# ./evaluate_sts.sh <model_name_or_path> <fewshot_size> <batch_size> [<N_GPUS>]
+# ./evaluate_sts.sh <model_name_or_path> <fewshot_size>
 #
 # Arguments:
 #   model_name_or_path : The path or name (on Huggingface) of the model to evaluate.
 #   model_log_dir      : The directory where csv output result are saved.
 #   fewshot_size       : The number of few-shot examples to use for evaluation.
-#   N_GPUS (optional)  : The number of GPUs to use for distributed evaluation. Defaults to 1 if not specified.
 #
 # Example:
-#   ./evaluate_sts.sh my_model 5 16 2
-#   This will evaluate the model 'my_model' using 5-shot examples, a batch size of 16, and 2 GPUs.
+#   ./evaluate_sts.sh my_model 5
+#   This will evaluate the model 'my_model' using 5-shot examples.
 #
 # Tasks:
 # This script supports the following STS tasks:
 #  jcsts
 
-n_gpus_default=$(nvidia-smi -L | wc -l)
-
 # Arguments
 model_name_or_path=$1
 model_log_dir=$2
-fewshot_size=${3:-1}
-n_gpus=${5:-$n_gpus_default}
+fewshot_size=${3:-0}
 
 # Semi-fixed variables
-model_max_length=-1
 NLI_LABELS="0,1,2,3,4,5"
 
 # Fixed variables
@@ -43,21 +38,17 @@ templates=(
     "sts_instructed_jp"
 )
 
-export TOKENIZERS_PARALLELISM=false
-
 # Function to run torchrun for STS tasks
-function torchrun_sts {
+function run_sts {
     joined_tasks=$1
     template=$2
     log_file=$3
 
-    torchrun --nproc_per_node="${n_gpus}" \
-        evaluate_sts.py \
+    python evaluate_sts.py \
         --model_name_or_path "${model_name_or_path}" \
         --task "${joined_tasks}" \
         --template_name "${template}" \
         --num_fewshot "${fewshot_size}" \
-        --model_max_length "${model_max_length}" \
         --nli_labels "${NLI_LABELS}" \
         --result_csv "$log_file"
 }
@@ -75,5 +66,5 @@ fi
 
 # Main loop
 for _template in "${templates[@]}"; do
-    torchrun_sts "$joined_tasks" "$_template" "$model_log_dir/all-${_template}.csv"
+    run_sts "$joined_tasks" "$_template" "$model_log_dir/all-${_template}.csv"
 done

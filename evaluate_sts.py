@@ -198,7 +198,7 @@ In default, we don't use this option, but use the exact demonstrations from the 
             ), f"Number of labels in the task ({samples['test'][0].n_label}) is not equal to the number of labels in the arguments ({len(label_set.split(','))})"
 
             # evaluation starts
-            if args.num_fewshot > 0:
+            if args.num_fewshot == 0:
                 demo_samples = None
             elif args.use_fake_demo:
                 ## Reference: Rethinking the Role of Demonstrations: What Makes In-Context Learning Work? (Min et al., 2022)

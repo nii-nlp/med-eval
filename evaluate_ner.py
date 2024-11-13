@@ -19,8 +19,7 @@ class GenerationForNERPipeline(EvaluationPipeline):
         self.stop_strings = [self.tokenizer.eos_token, "\n"]
         self.sampling_params = SamplingParams(
             temperature=0.0,
-            prompt_logprobs=0,
-            max_tokens=1,
+            max_tokens=self.args.max_new_tokens,
             seed=self.args.seed,
             stop=self.stop_strings,
         )

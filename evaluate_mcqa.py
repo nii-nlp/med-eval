@@ -63,7 +63,8 @@ class MCQAEvaluationPipeline(EvaluationPipeline):
                 truncate=self.args.truncate,
             )
 
-        except AssertionError:
+        except AssertionError as e:
+            logger.warning(e)
             logger.warning("Skip this task due to the lack of samples for few-shot learning.")
             return
         except Exception as e:
@@ -204,7 +205,7 @@ if __name__ == "__main__":
         samples = pipeline.load_downstream_task(dataset_name=task)
 
         # evaluation starts
-        if args.num_fewshot > 0:
+        if args.num_fewshot == 0:
             demo_samples = None
         elif args.use_fake_demo:
             ## Reference: Rethinking the Role of Demonstrations: What Makes In-Context Learning Work? (Min et al., 2022)
