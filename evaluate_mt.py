@@ -28,7 +28,6 @@ class GenerationForMTPipeline(EvaluationPipeline):
             dataset = load_ejmmt(task_name, source_lang, target_lang)
         else:
             raise ValueError(f"Unknown task: {task_name}")
-        dataset = self.reconstruct_dataset(dataset)
         return dataset
 
     def evaluate(

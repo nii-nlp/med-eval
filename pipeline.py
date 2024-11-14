@@ -40,7 +40,7 @@ class EvaluationPipeline:
             model_name_or_path,
             dtype="bfloat16",
             gpu_memory_utilization=0.5,
-            tensor_parallel_size=1,
+            tensor_parallel_size=8,
         )
         self.model.set_tokenizer(self.tokenizer)
 
@@ -96,7 +96,6 @@ class EvaluationPipeline:
 
         try:
             dataset=self.load_samples_f(dataset_name)
-            dataset=self.reconstruct_dataset(dataset)
             return dataset
         except:
             raise ValueError(f"Unknown task: {dataset_name}")

@@ -54,7 +54,8 @@ function run_mt {
         --num_fewshot "${fewshot_size}" \
         --translation "${translation}" \
         --max_new_tokens "${max_new_tokens}" \
-        --result_csv "$log_file"
+        --result_csv "$log_file" \
+        --data_type test
 }
 
 # Prepare

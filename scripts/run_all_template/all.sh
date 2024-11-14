@@ -11,14 +11,25 @@
 # Example:
 #   bash scripts/run_all_template/all.sh my_model log_1
 #   This will evaluate the model 'my_model' for all tasks (MCQA, NER, DC, STS, MT) and shot settings.
+#SBATCH --job-name=med-eval
+#SBATCH --partition=dev
+#SBATCH --nodes=1
+#SBATCH --exclusive
+#SBATCH --nodelist ip-10-3-41-123,ip-10-3-56-13
+#SBATCH --output=slurm_logs/%x-%j.out
+#SBATCH --error=slurm_logs/%x-%j.err
 
+source /etc/profile.d/modules.sh
+module use /fsx/ubuntu/yokota_lab_workspace/module
+module load cuda-12.1.1 cudnn-9.5.0
+source venv/bin/activate
 
 # Arguments
 model_name_or_path=$1
 model_log_dirname=$2
 
 # Semi-fixed variables
-log_dir="logs"
+log_dir="/fsx/ubuntu/shared/evaluation/med-eval-test-log"
 
 # Batch size settings for each task and shot setting
 tasks=(

@@ -67,7 +67,8 @@ function run_mcqa {
         --task "${joined_tasks}" \
         --template_name "${template}" \
         --num_fewshot "${fewshot_size}" \
-        --result_csv "$log_file"
+        --result_csv "$log_file" \
+        --data_type test
 }
 
 # Join tasks

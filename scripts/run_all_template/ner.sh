@@ -56,7 +56,8 @@ function run_ner {
         --template_name "${template}" \
         --num_fewshot "${fewshot_size}" \
         --max_new_tokens "${max_new_tokens}" \
-        --result_csv "$log_file"
+        --result_csv "$log_file" \
+        --data_type test
 }
 
 # Join tasks

@@ -50,7 +50,8 @@ function run_sts {
         --template_name "${template}" \
         --num_fewshot "${fewshot_size}" \
         --nli_labels "${NLI_LABELS}" \
-        --result_csv "$log_file"
+        --result_csv "$log_file" \
+        --data_type test
 }
 
 # Join tasks
