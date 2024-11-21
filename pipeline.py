@@ -1,6 +1,7 @@
 import torch
 from torch.utils.data import DataLoader, Dataset
-from transformers import AutoConfig, AutoTokenizer
+from transformers import (AutoConfig, AutoModelForCausalLM,
+                          AutoModelForSeq2SeqLM, AutoTokenizer)
 from transformers.trainer_utils import set_seed
 from vllm import LLM
 
@@ -36,13 +37,37 @@ class EvaluationPipeline:
             "epfl-llm/meditron-7b",
         ]:
             self.model_config.torch_dtype = torch.float16
-        self.model = LLM(
-            model_name_or_path,
-            dtype="bfloat16",
-            gpu_memory_utilization=0.5,
-            tensor_parallel_size=8,
-        )
-        self.model.set_tokenizer(self.tokenizer)
+        if self.args.task_category not in ["mcqa", "sts"]:
+            self.model = LLM(
+                model_name_or_path,
+                dtype="bfloat16",
+                gpu_memory_utilization=0.9,
+                tensor_parallel_size=2,
+            )
+            self.model.set_tokenizer(self.tokenizer)
+            return
+        if model_name_or_path in [
+            "bigscience/mt0-small",
+            "bigscience/mt0-xl",
+            "facebook/nllb-200-distilled-600M",
+        ]:
+            self.model = AutoModelForSeq2SeqLM.from_pretrained(
+                model_name_or_path,
+                torch_dtype=getattr(self.model_config, "torch_dtype", None),
+                use_cache=True,
+                device_map="auto",
+            )
+        else:
+            self.model = AutoModelForCausalLM.from_pretrained(
+                model_name_or_path,
+                torch_dtype=getattr(self.model_config, "torch_dtype", None),
+                use_cache=True,
+                device_map="auto",
+            )
+        if pad_token_not_exist:
+            self.model.resize_token_embeddings(len(self.tokenizer))
+        # self.model = self.model.to(self.device)
+        self.model.eval()
 
     def __task_specific_preparation__(self):
         self.load_samples_f = None
@@ -66,16 +91,15 @@ class EvaluationPipeline:
         data_collator = self.data_collator_f(tokenizer=self.tokenizer)
         dataloader = DataLoader(
             dataset,
-            batch_size=self.args.batch_size,
+            batch_size=24,
             collate_fn=data_collator,
-            num_workers=self.args.num_workers,
             shuffle=False,
             drop_last=False,
         )
 
         return dataset, dataloader
 
-    def reconstruct_dataset(self,dataset: Dataset):
+    def reconstruct_dataset(self, dataset: Dataset):
         if len(dataset["validation"]) != 0:
             # Validation data alerady prerared
             return dataset
@@ -95,7 +119,7 @@ class EvaluationPipeline:
         dataset_name = kwargs.get("dataset_name", None)
 
         try:
-            dataset=self.load_samples_f(dataset_name)
+            dataset = self.load_samples_f(dataset_name)
             return dataset
         except:
             raise ValueError(f"Unknown task: {dataset_name}")

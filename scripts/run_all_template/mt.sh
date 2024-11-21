@@ -2,24 +2,22 @@
 # This script evaluates machine translation models on various translation tasks.
 #
 # Usage:
-# ./evaluate_mt.sh <model_name_or_path> <numshot>
+# bash scripts/run_all_template/evaluate_mt.sh <model_name_or_path> <model_log_file> <numshot>
 #
 # Arguments:
 #   model_name_or_path : The path or name (on Huggingface) of the model to evaluate.
-#   model_log_dir      : The directory where csv output result are saved.
+#   model_log_file     : The result csv file
 #   fewshot_size       : The number of few-shot examples to use for evaluation.
-#
-# Example:
-#   ./evaluate_mt.sh my_model 5
-#   This will evaluate the model 'my_model' using 5-shot examples.
 #
 # Tasks:
 # This script supports the following tasks:
 #  ejmmt (English-Japanese and Japanese-English translation tasks)
 
+source scripts/run_all_template/common.sh
+
 # Arguments
 model_name_or_path=$1
-model_log_dir=$2
+model_log_file=$2
 fewshot_size=${3:-0}
 
 # Semi-fixed variables
@@ -27,6 +25,11 @@ max_new_tokens=256
 
 # Fixed variables
 # Translation templates
+tasks=("ejmmt")
+
+ejmmt_en2ja=("english-japanese")
+ejmmt_ja2en=("japanese-english")
+
 ejmmt_en2ja_template=(
     "mt_minimal"
     "english_japanese"
@@ -58,16 +61,18 @@ function run_mt {
         --data_type test
 }
 
-# Prepare
-if [ ! -d "$model_log_dir" ] ;then
-    echo "$model_log_dir does not exits. Create the directory: $model_log_dir"
-    mkdir -p "$model_log_dir"
-fi
+# repeat tasks
+repeated_en2ja_tasks=$(repeat_tasks_for_templates tasks ejmmt_en2ja_template)
+repeated_ja2en_tasks=$(repeat_tasks_for_templates tasks ejmmt_ja2en_template)
+all_tasks="${repeated_en2ja_tasks},${repeated_ja2en_tasks}"
+# repeat translations
+repeated_en2ja_translations=$(repeat_tasks_for_templates ejmmt_en2ja ejmmt_en2ja_template)
+repeated_ja2en_translations=$(repeat_tasks_for_templates ejmmt_ja2en ejmmt_ja2en_template)
+all_translations="${repeated_en2ja_translations},${repeated_ja2en_translations}"
+# join templates
+repeated_en2ja_templates=$(join_with_comma "${ejmmt_en2ja_template[@]}")
+repeated_ja2en_templates=$(join_with_comma "${ejmmt_en2ja_template[@]}")
+all_templates="${repeated_en2ja_templates},${repeated_ja2en_templates}"
 
 # Main loop
-for _template in "${ejmmt_en2ja_template[@]}"; do
-    run_mt "ejmmt" 'english-japanese' "$_template" "$model_log_dir/ejmmt_e2j-${_template}.csv"
-done
-for _template in "${ejmmt_ja2en_template[@]}"; do
-    run_mt "ejmmt" 'japanese-english' "$_template" "$model_log_dir/ejmmt_j2e-${_template}.csv"
-done
+run_mt "$all_tasks" "${all_translations}" "$all_templates" "$model_log_file"

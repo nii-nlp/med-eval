@@ -19,17 +19,12 @@
 #SBATCH --output=slurm_logs/%x-%j.out
 #SBATCH --error=slurm_logs/%x-%j.err
 
-source /etc/profile.d/modules.sh
-module use /fsx/ubuntu/yokota_lab_workspace/module
-module load cuda-12.1.1 cudnn-9.5.0
-source venv/bin/activate
-
 # Arguments
 model_name_or_path=$1
 model_log_dirname=$2
 
 # Semi-fixed variables
-log_dir="/fsx/ubuntu/shared/evaluation/med-eval-test-log"
+log_dir="logs"
 
 # Batch size settings for each task and shot setting
 tasks=(
@@ -54,9 +49,8 @@ fi
 # Main
 for _task in "${tasks[@]}"; do
     for _shot in "${shot_sizes[@]}"; do
-        _log_dir="$model_log_dir/${_task}-${_shot}shot"
-        mkdir -p "$_log_dir"
+        _log_file="$model_log_dir/${_task}-${_shot}shot.csv"
         echo "Running $_task with ${_shot}-shot setting"
-        bash "scripts/run_all_template/${_task}.sh" "$model_name_or_path" "$_log_dir" "$_shot"
+        bash "scripts/run_all_template/${_task}.sh" "$model_name_or_path" "$_log_file" "$_shot"
     done
 done

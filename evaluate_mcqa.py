@@ -10,9 +10,10 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from vllm import SamplingParams
+from tqdm import tqdm
 
 from data_loaders.base import load_mcqa_samples
+from data_utils import LMDataCollatorForPerplexity
 from pipeline import EvaluationPipeline
 from tasks.mcqa import MCQARequestDataset, MCQASample
 from tool_utils import output_as_csv, show_pretty_table
@@ -25,26 +26,23 @@ class MCQAEvaluationPipeline(EvaluationPipeline):
     def __task_specific_preparation__(self):
         self.load_samples_f = load_mcqa_samples
         self.dataset_f = MCQARequestDataset
-        self.sampling_params = SamplingParams(
-            temperature=0.0,
-            prompt_logprobs=0,
-            max_tokens=1,
-            seed=self.args.seed,
-        )
+        self.data_collator_f = LMDataCollatorForPerplexity
 
-    def _loglikelihood_batch(self, input_ids: list[list[int]]):
-        outputs = self.model.generate(
-            sampling_params=self.sampling_params, prompt_token_ids=input_ids
+    def _loglikelihood_batch(self, input_ids, labels, batch):
+        n_batch = batch["input_ids"].size(0)
+
+        lm_logits = self.model(input_ids=input_ids).logits
+
+        shift_logits = lm_logits[..., :-1, :].contiguous()
+        shift_labels = labels[..., 1:].contiguous()
+        loss_fct = torch.nn.CrossEntropyLoss(ignore_index=-100, reduction="none")
+
+        losses = loss_fct(
+            shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1)
         )
-        logprobs = [
-            [
-                list(input_token.values())[0].logprob
-                for input_token in _out.prompt_logprobs
-                if input_token is not None
-            ]
-            for _out in outputs
-        ]
-        return logprobs
+        losses = losses.view(n_batch, -1).sum(dim=-1)
+
+        return losses
 
     def evaluate(
         self,
@@ -54,40 +52,51 @@ class MCQAEvaluationPipeline(EvaluationPipeline):
         dump_file: str = None,
     ):
         try:
-            dataset = self.dataset_f(
-                samples=samples,
-                demo_samples=demo_samples,
-                tokenizer=self.tokenizer,
-                template_name=template_name,
-                num_fewshot=self.args.num_fewshot,
-                truncate=self.args.truncate,
+            dataset, dataloader = self.prepare_data(
+                samples, demo_samples, template_name
             )
 
         except AssertionError as e:
             logger.warning(e)
-            logger.warning("Skip this task due to the lack of samples for few-shot learning.")
+            logger.warning(
+                "Skip this task due to the lack of samples for few-shot learning."
+            )
             return
         except Exception as e:
             raise e
 
         result_collection = []
 
-        prompt_token_ids = [dataset[j]["input_ids"] for j in range(len(dataset))]
-        with torch.inference_mode():
-            logprobs = self._loglikelihood_batch(prompt_token_ids)
+        with torch.no_grad():
+            for batch in tqdm(dataloader, total=len(dataloader)):
+                batch = {
+                    k: v.to(self.model.device) if k in ["input_ids", "labels"] else v
+                    for k, v in batch.items()
+                }
 
-        for i in range(len(logprobs)):
-            is_target_outputs = np.array(dataset[i]["labels"][1:]) != -100
-            target_loss = -np.where(is_target_outputs, logprobs[i], 0).sum()
-            result_collection.append(
-                (
-                    dataset[i]["request_id"],
-                    dataset[i]["option_id"],
-                    dataset[i]["sample"],
-                    target_loss,
-                    is_target_outputs.sum(),
+                losses = self._loglikelihood_batch(
+                    batch["input_ids"], batch["labels"], batch
                 )
-            )
+
+                for i in range(len(losses)):
+                    result_collection.append(
+                        (
+                            batch["request_id"][i],
+                            batch["option_id"][i],
+                            batch["sample"][i],
+                            losses[i].item(),
+                            (batch["labels"][i] != -100).sum().item(),
+                        )
+                    )
+                    if (batch["labels"][i] != -100).sum().item() == 0:
+                        print(batch["input_ids"][i])
+                        print("-----")
+                        print(batch["labels"][i])
+                        print("-----")
+                        print(batch["sample"][i])
+                        print("-----")
+                        print(losses[i].item())
+                        exit(1)
 
         # IgakuQA has different number of options for each sample
         # assert (len(result_collection) == dataset.num_samples * dataset.num_options), f"{len(result_collection)} != {dataset.num_samples * dataset.num_options}"
@@ -181,6 +190,7 @@ if __name__ == "__main__":
     parser.add_argument("--truncate", type=strtobool, default=False)
     parser.add_argument("--dump_file", type=str, default=None)
     parser.add_argument("--result_csv", type=str, default=None)
+    parser.add_argument("--task_category", type=str, default="mcqa")
 
     args = parser.parse_args()
 

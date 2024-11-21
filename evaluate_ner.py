@@ -133,6 +133,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--truncate", type=strtobool, default=False)
     parser.add_argument("--result_csv", type=str, default=None)
+    parser.add_argument("--task_category", type=str, default="ner")
 
     args = parser.parse_args()
     if args.result_csv is not None:
@@ -143,14 +144,21 @@ if __name__ == "__main__":
 
     # load task
     tasks = args.task.split(",")
+    template_names = args.template_name.split(",")
+    if len(template_names) == 1:
+        template_names = template_names * len(tasks)
+
+    assert len(tasks) == len(
+        template_names
+    ), f"Number of tasks and templates should be the same, but got {len(tasks)} != {len(template_names)}"
+
     evaluation_results = defaultdict(lambda: defaultdict(dict))
-    for task in tasks:
+    for task, template_name in zip(tasks, template_names):
         samples = pipeline.load_downstream_task(dataset_name=task)
-        template_name = args.template_name
         evaluation_result = pipeline.evaluate(
             samples[args.data_type],
             demo_samples=samples["train"],
-            template_name=args.template_name,
+            template_name=template_name,
         )
 
         evaluation_results[task][template_name] = evaluation_result

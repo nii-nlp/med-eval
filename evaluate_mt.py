@@ -119,6 +119,7 @@ if __name__ == "__main__":
     parser.add_argument("--translation", type=str, default="english-japanese")
     parser.add_argument("--max_new_tokens", type=int, default=384)
     parser.add_argument("--result_csv", type=str, default=None)
+    parser.add_argument("--task_category", type=str, default="mt")
 
     args = parser.parse_args()
 
@@ -129,33 +130,31 @@ if __name__ == "__main__":
         parent_path = Path(args.result_csv).parent.exists()
         assert parent_path, f"{parent_path} does not exists. Cannot write output."
 
-    assert (len(tasks) == len(translations)) or (
-        len(tasks) == 1 and len(translations) > 1
+    assert (len(tasks) == len(translations)) and (
+        len(tasks) == 1 or len(tasks) == len(templates)
     )
 
-    if len(tasks) == 1:
-        tasks = [tasks[0] for _ in range(len(translations))]
+    if len(tasks) != len(templates):
+        tasks = [tasks[0] for _ in range(len(templates))]
+        translations = [translations[0] for _ in range(len(templates))]
 
     pipeline = GenerationForMTPipeline(args)
 
     all_bleus, all_tasks = [], []
     evaluation_results = defaultdict(lambda: defaultdict(dict))
-    for task, translation in zip(tasks, translations):
-        source_lang, target_lang = translation.split("-")
-
-        samples = pipeline.load_downstream_task(args.task, source_lang, target_lang)
-
-        for template in templates:
-            evaluation_result = pipeline.evaluate(
-                samples[args.data_type],
-                demo_samples=samples["train"] if args.num_fewshot > 0 else None,
-                template_name=template,
-                source_lang=source_lang,
-                target_lang=target_lang,
-            )
-            translation_short = source_lang[:2] + "2" + target_lang[:2]
-            full_task_name = task + "-" + translation_short
-            evaluation_results[full_task_name][template] = evaluation_result
+    for _task, _translation, _template in zip(tasks, translations, templates):
+        source_lang, target_lang = _translation.split("-")
+        samples = pipeline.load_downstream_task(_task, source_lang, target_lang)
+        evaluation_result = pipeline.evaluate(
+            samples[args.data_type],
+            demo_samples=samples["train"] if args.num_fewshot > 0 else None,
+            template_name=_template,
+            source_lang=source_lang,
+            target_lang=target_lang,
+        )
+        translation_short = source_lang[:2] + "2" + target_lang[:2]
+        full_task_name = _task + "-" + translation_short
+        evaluation_results[full_task_name][_template] = evaluation_result
 
     show_pretty_table(evaluation_results)
     if args.result_csv:

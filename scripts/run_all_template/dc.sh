@@ -2,24 +2,22 @@
 # This script evaluates Domain Classification models on various tasks.
 #
 # Usage:
-# ./evaluate_dc.sh <model_name_or_path> <fewshot_size>
+# bash scripts/run_all_template/evaluate_ner.evaluate_dc <model_name_or_path> <model_log_file> <fewshot_size>
 #
 # Arguments:
 #   model_name_or_path : The path or name (on Huggingface) of the model to evaluate.
-#   model_log_dir      : The directory where csv output result are saved.
+#   model_log_file     : The result csv file
 #   fewshot_size       : The number of few-shot examples to use for evaluation.
-#
-# Example:
-#   ./evaluate_dc.sh my_model 5
-#   This will evaluate the model 'my_model' using 5-shot examples.
 #
 # Tasks:
 # This script supports the following Domain Classification tasks:
 #  crade, rrtnm, smdis
 
+source scripts/run_all_template/common.sh
+
 # Arguments
 model_name_or_path=$1
-model_log_dir=$2
+model_log_file=$2
 fewshot_size=${3:-1}
 
 # Fixed variables
@@ -52,18 +50,8 @@ function run_dc {
         --data_type test
 }
 
-# Join tasks
-IFS=','
-joined_tasks="${tasks[*]}"
-unset IFS
+# repeat general tasks
+all_tasks=$(repeat_tasks_for_templates tasks templates)
+all_templates=$(repeat_templates_for_tasks templates tasks)
 
-# Prepare
-if [ ! -d "$model_log_dir" ] ;then
-    echo "$model_log_dir does not exits. Create the directory: $model_log_dir"
-    mkdir -p "$model_log_dir"
-fi
-
-# Main loop
-for _template in "${templates[@]}"; do
-    run_dc "$joined_tasks" "$_template" "$model_log_dir/all-${_template}.csv"
-done
+run_dc "$all_tasks" "$all_templates" "$model_log_file"
