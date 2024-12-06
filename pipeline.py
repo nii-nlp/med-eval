@@ -1,10 +1,12 @@
 import torch
+import torch_xla.core.xla_model as xm
 from torch.utils.data import DataLoader, Dataset
 from transformers import (AutoConfig, AutoModelForCausalLM,
                           AutoModelForSeq2SeqLM, AutoTokenizer)
 from transformers.trainer_utils import set_seed
 from vllm import LLM
 
+device = xm.xla_device()
 
 class EvaluationPipeline:
     def __init__(self, args):
@@ -40,9 +42,11 @@ class EvaluationPipeline:
         if self.args.task_category not in ["mcqa", "sts"]:
             self.model = LLM(
                 model_name_or_path,
+                device="neuron",
                 dtype="bfloat16",
-                gpu_memory_utilization=0.9,
-                tensor_parallel_size=2,
+                tensor_parallel_size=1,
+                max_num_seqs=8,
+                max_model_len=4096,
             )
             self.model.set_tokenizer(self.tokenizer)
             return
@@ -66,8 +70,8 @@ class EvaluationPipeline:
             )
         if pad_token_not_exist:
             self.model.resize_token_embeddings(len(self.tokenizer))
-        # self.model = self.model.to(self.device)
         self.model.eval()
+        #self.model.to(device)
 
     def __task_specific_preparation__(self):
         self.load_samples_f = None

@@ -10,6 +10,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
+import torch_neuronx
 from tqdm import tqdm
 
 from data_loaders.base import load_mcqa_samples
@@ -67,12 +68,17 @@ class MCQAEvaluationPipeline(EvaluationPipeline):
 
         result_collection = []
 
+        is_traced=False
+
         with torch.no_grad():
             for batch in tqdm(dataloader, total=len(dataloader)):
                 batch = {
                     k: v.to(self.model.device) if k in ["input_ids", "labels"] else v
                     for k, v in batch.items()
                 }
+                if not is_traced:
+                    self.model=torch_neuronx.trace(self.model,input_ids=batch["input_ids"])
+                    is_traced=True
 
                 losses = self._loglikelihood_batch(
                     batch["input_ids"], batch["labels"], batch
