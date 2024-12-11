@@ -31,11 +31,29 @@ class MCQAEvaluationPipeline(EvaluationPipeline):
 
     def _loglikelihood_batch(self, input_ids, labels, batch):
         n_batch = batch["input_ids"].size(0)
-
-        lm_logits = self.model(input_ids=input_ids).logits
+        if n_batch == 0:
+            raise ValueError("Empty batch detected!")
+        
+        padded_attention_mask = torch.ones_like(input_ids)
+            
+        if self.model.model.neuron_config.output_all_logits:
+            model_inputs = self.model.prepare_inputs_for_prefill(input_ids, padded_attention_mask)
+            lm_logits = self.model(**model_inputs).logits
+        else:
+            model_inputs = self.model.prepare_inputs_for_prefill(
+                    input_ids[:, :1], padded_attention_mask[:, :1]
+                )
+            lm_logits = [self.model.forward(**model_inputs).logits]
+            for i in range(1, input_ids.size(1)):
+                model_inputs = self.model.prepare_inputs_for_decode(
+                    input_ids[:, : i + 1], padded_attention_mask[:, : i + 1]
+                )
+                lm_logits.append(self.model.forward(**model_inputs).logits)
+            lm_logits = torch.cat(lm_logits, dim=1)
 
         shift_logits = lm_logits[..., :-1, :].contiguous()
         shift_labels = labels[..., 1:].contiguous()
+
         loss_fct = torch.nn.CrossEntropyLoss(ignore_index=-100, reduction="none")
 
         losses = loss_fct(
@@ -76,9 +94,9 @@ class MCQAEvaluationPipeline(EvaluationPipeline):
                     k: v.to(self.model.device) if k in ["input_ids", "labels"] else v
                     for k, v in batch.items()
                 }
-                if not is_traced:
-                    self.model=torch_neuronx.trace(self.model,input_ids=batch["input_ids"])
-                    is_traced=True
+                #if not is_traced:
+                #    self.model=torch_neuronx.trace(self.model,input_ids=batch["input_ids"])
+                #    is_traced=True
 
                 losses = self._loglikelihood_batch(
                     batch["input_ids"], batch["labels"], batch

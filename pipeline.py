@@ -4,9 +4,9 @@ from torch.utils.data import DataLoader, Dataset
 from transformers import (AutoConfig, AutoModelForCausalLM,
                           AutoModelForSeq2SeqLM, AutoTokenizer)
 from transformers.trainer_utils import set_seed
-from vllm import LLM
+from optimum.neuron import NeuronModelForSeq2SeqLM, NeuronModelForCausalLM
 
-device = xm.xla_device()
+#device = xm.xla_device()
 
 class EvaluationPipeline:
     def __init__(self, args):
@@ -40,6 +40,7 @@ class EvaluationPipeline:
         ]:
             self.model_config.torch_dtype = torch.float16
         if self.args.task_category not in ["mcqa", "sts"]:
+            from vllm import LLM
             self.model = LLM(
                 model_name_or_path,
                 device="neuron",
@@ -50,27 +51,52 @@ class EvaluationPipeline:
             )
             self.model.set_tokenizer(self.tokenizer)
             return
+        if pad_token_not_exist:
+            if model_name_or_path in ["meta-llama/Meta-Llama-3-8B", "hfl/llama-3-chinese-8b", "tokyotech-llm/Swallow-7b-hf", "epfl-llm/meditron-7b"]:
+                self.model_config.torch_dtype = torch.float16
+
+            if model_name_or_path in ["bigscience/mt0-small", "bigscience/mt0-xl", "facebook/nllb-200-distilled-600M"]:
+                self.model = AutoModelForSeq2SeqLM.from_pretrained(
+                    model_name_or_path,
+                    torch_dtype=getattr(self.model_config, "torch_dtype", None),
+                    use_cache=True
+                )
+            else:
+                self.model = AutoModelForCausalLM.from_pretrained(
+                    model_name_or_path,
+                    torch_dtype=getattr(self.model_config, "torch_dtype", None),
+                    use_cache=True
+                )
+            self.model.resize_token_embeddings(len(self.tokenizer))
+            self.model.save_pretrained(model_name_or_path + "_adjusted")
+            model_name_or_path = model_name_or_path + "_adjusted"
+            del self.model
+        compiler_args = {"num_cores": 32}
+        input_shapes = {"batch_size": 32, "sequence_length": 4096}
         if model_name_or_path in [
             "bigscience/mt0-small",
             "bigscience/mt0-xl",
             "facebook/nllb-200-distilled-600M",
         ]:
-            self.model = AutoModelForSeq2SeqLM.from_pretrained(
+
+            self.model = NeuronModelForSeq2SeqLM.from_pretrained(
                 model_name_or_path,
-                torch_dtype=getattr(self.model_config, "torch_dtype", None),
                 use_cache=True,
+                export=True,
                 device_map="auto",
+                **compiler_args,
+                **input_shapes,
             )
         else:
-            self.model = AutoModelForCausalLM.from_pretrained(
+            self.model = NeuronModelForCausalLM.from_pretrained(
                 model_name_or_path,
-                torch_dtype=getattr(self.model_config, "torch_dtype", None),
                 use_cache=True,
+                export=True,
                 device_map="auto",
+                **compiler_args,
+                **input_shapes,
             )
-        if pad_token_not_exist:
-            self.model.resize_token_embeddings(len(self.tokenizer))
-        self.model.eval()
+        #self.model.eval()
         #self.model.to(device)
 
     def __task_specific_preparation__(self):
@@ -95,7 +121,7 @@ class EvaluationPipeline:
         data_collator = self.data_collator_f(tokenizer=self.tokenizer)
         dataloader = DataLoader(
             dataset,
-            batch_size=24,
+            batch_size=32,
             collate_fn=data_collator,
             shuffle=False,
             drop_last=False,
