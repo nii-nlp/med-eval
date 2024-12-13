@@ -19,9 +19,6 @@ except:
     main_print("BM25 is not installed. Please install rank_bm25 to use BM25.")
 
 
-SUPPORTING_TASKS = ["igakuqa", "igakuqa_en", "medmcqa"]
-
-
 @dataclass
 class MCQASample:
     sample_id: Union[str, int]
@@ -44,14 +41,7 @@ class MCQASample:
     def __post_init__(self):
         self.n_options = len(self.options)
         for option in self.options:
-            # assert option != "", f"Empty option in {self}"
-            if option == "":
-                print(f"Empty option in {self}")
-
-        # shuffle options
-        # answer = self.options[self.answer_idx]
-        # random.shuffle(self.options)
-        # self.answer_idx = self.options.index(answer)
+            assert option != "", f"Empty option in {self}"
 
 
 class MCQARequestDataset(RequestDataset):
@@ -102,7 +92,11 @@ class MCQARequestDataset(RequestDataset):
                 deduplicating_text_set = set()
                 valid_few_shot_demos = []
                 for demo in candidate_few_shot_demos:
-                    text = self.instantiate_template(demo) + f" {demo.options[demo.answer_idx]}"
+                    if isinstance(demo, str):
+                        text = demo
+                    else:
+                        text = self.instantiate_template(demo) + f"{demo.options[demo.answer_idx]}"
+
                     if text not in deduplicating_text_set:
                         deduplicating_text_set.add(text)
                         valid_few_shot_demos.append(text)
@@ -120,9 +114,10 @@ class MCQARequestDataset(RequestDataset):
 
             all_output_token_ids = []
             for j, option in enumerate(sample.options):
-                output_text = input_text + " {}".format(option)
+                output_text = input_text + "{}".format(option)
+
                 if first_sample_flag and sample.answer_idx == j:
-                    main_print(f'=====\n{input_text}\n-----\n{" {}".format(option)}\n=====')
+                    main_print(f'=====\n{input_text}\n-----\n{"{}".format(option)}\n=====')
                     first_sample_flag = False
 
                 all_token_ids = self.tokenizer(output_text, return_tensors="pt")["input_ids"].squeeze().tolist()

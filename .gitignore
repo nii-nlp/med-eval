@@ -1,4 +1,13 @@
 JMedBench
+analysis
+archive
+dataset
+github
+raw_data
+unify_dataset/
+translate_dataset/
+preprocess
+jmed_eval
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

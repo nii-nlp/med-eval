@@ -15,7 +15,7 @@ translation=${4:-"english=>japanese"}
 
 template_name=${5:-"few-shot"}
 
-batch_size=${6:-2}
+batch_size=${6:-1}
 seed=${7:-42}
 num_fewshot=${8:-0}
 

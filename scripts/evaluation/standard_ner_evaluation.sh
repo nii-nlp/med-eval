@@ -9,7 +9,7 @@ MASTER_PORT=${9:-2333}
 
 model_name_or_path=${2:-"gpt2"}
 
-task=${3:-"bc5disease"}  # bc2gm,bc5chem,jnlpba,bc5disease,ncbi_disease
+task=${3:-"bc5disease_jp"}  # bc2gm,bc5chem,jnlpba,bc5disease,ncbi_disease
 # mrner_disease,mrner_medicine,nrner
 template_name=${4:-"standard"}
 
@@ -33,4 +33,4 @@ torchrun --nproc_per_node=${N_NODE} \
            --use_knn_demo ${use_knn_demo}
 
 
-# bash scripts/evaluation/standard_ner_evaluation.sh 8 meta-llama/Llama-2-7b-hf bc2gm_jp,bc5chem_jp,jnlpba_jp,bc5disease_jp,ncbi_disease_jp standard 4 0 42
+# bash scripts/evaluation/standard_ner_evaluation.sh 8 meta-llama/Llama-2-7b-hf mrner_medicine,mrner_disease,nrner,bc2gm_jp,bc5chem_jp,jnlpba_jp,bc5disease_jp,ncbi_disease_jp standard 4 0 42

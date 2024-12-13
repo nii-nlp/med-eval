@@ -21,7 +21,6 @@ from data_loaders.base import load_mcqa_samples
 from tasks.mcqa import MCQASample, MCQARequestDataset
 from data_utils import LMDataCollatorForPerplexity
 from pipeline import EvaluationPipeline
-from templates.jmedbench import UnifiedTemplate
 
 
 class MCQAEvaluationPipeline(EvaluationPipeline):
@@ -228,20 +227,30 @@ In default, we don't use this option, but use the exact demonstrations from the 
 
         elif args.use_knn_demo:
             demo_samples = []
-            template = UnifiedTemplate()
+            knn_data_template_name = template_name if args.knn_data_template_name is None else args.knn_data_template_name
 
-            train_samples = json.load(open(args.corpus_filename, "r", encoding="utf-8"))["train"] if args.corpus_filename is not None else samples["train"]
+            if args.knn_data_dir is not None:
+                knn_data_file = os.path.join(
+                    args.knn_data_dir,
+                    task, knn_data_template_name,
+                    f"{args.retriever_id}_knn.csv"
+                )
+            elif args.knn_data_file is not None:
+                knn_data_file = args.knn_data_file
+            else:
+                raise ValueError("Please provide the KNN data file.")
 
-            with open(args.knn_data_file) as f:
+            if args.corpus_filename is not None:
+                train_samples = json.load(open(args.corpus_filename, "r", encoding="utf-8"))["train"]
+            else:
+                train_samples = samples["train"]
+
+            with open(knn_data_file) as f:
                 for line in f:
                     indices = [int(index) for index in line.strip().split(",")][1:]
                     demo_sample_list = []
                     for i in range(args.num_fewshot):
-                        instantiated_sample = template.instantiate_template_full(
-                            sample=train_samples[indices[i]],
-                            template_name="Standard"
-                        )
-                        demo_sample_list.append(instantiated_sample)
+                        demo_sample_list.append(train_samples[indices[i]])
 
                     demo_samples.append(demo_sample_list)
 

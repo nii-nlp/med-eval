@@ -15,6 +15,14 @@ class MTSample:
     source_language: str = None
     target_language: str = None
 
+    def to_dict(self):
+        return {
+            "source_text": self.source_text,
+            "target_text": self.target_text,
+            "source_language": self.source_language,
+            "target_language": self.target_language,
+        }
+
 
 class MTRequestDataset(RequestDataset):
     def __init__(

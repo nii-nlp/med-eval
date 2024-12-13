@@ -10,9 +10,9 @@ MASTER_PORT=${10:-2333}
 model_name_or_path=${2:-"gpt2"}
 
 task=${3:-"crade,rrtnm,smdis"}
-template_name=${4:-"mcqa_with_options"}
+template_name=${4:-"dc_with_options_jp"}
 
-batch_size=${5:-4}
+batch_size=${5:-1}
 num_fewshot=${6:-0}
 seed=${7:-42}
 model_max_length=${8:--1}

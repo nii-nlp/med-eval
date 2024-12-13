@@ -22,14 +22,14 @@ BENCHMARK_NAME = "Coldog2333/JMedBench"
 
 def load_mcqa_samples(dataset_name: str) -> Dict[str, List[MCQASample]]:
 
-    mcqa_samples = {"train": [], "test": []}
+    mcqa_samples = {"train": [], "test": [], "validation": []}
 
     # try to load from huggingface firstly
     try:
         main_print(f"Try loading {dataset_name} dataset from Hugging Face...")
         dataset = load_dataset(BENCHMARK_NAME, dataset_name)
 
-        for split in ["train", "test"]:
+        for split in ["train", "test", "validation"]:
             if split in dataset.keys():
                 for sample in dataset[split]:
                     mcqa_samples[split].append(
@@ -43,11 +43,12 @@ def load_mcqa_samples(dataset_name: str) -> Dict[str, List[MCQASample]]:
                         )
                     )
 
-    except:
+    except Exception as e:
+        print(e)
 
         main_print(f"Loading {dataset_name} dataset from local file...")
 
-        for split in ["train", "test"]:
+        for split in ["train", "test", "validation"]:
             data_filename = os.path.join(DATA_ROOT_DIR, f"{dataset_name}/{split}.jsonl")
             if os.path.exists(data_filename):
 
@@ -70,6 +71,7 @@ def load_mcqa_samples(dataset_name: str) -> Dict[str, List[MCQASample]]:
 
     main_print(f"Loaded {len(mcqa_samples['test'])} samples for testing set.")
     main_print(f"Loaded {len(mcqa_samples['train'])} samples for training set.")
+    main_print(f"Loaded {len(mcqa_samples['validation'])} samples for validation set.")
 
     return mcqa_samples
 
@@ -141,7 +143,8 @@ def load_ner(dataset_name: str) -> Dict[str, List[NERSample]]:
                         )
                     )
 
-    except:
+    except Exception as e:
+        print(e)
 
         main_print(f"Loading {dataset_name} dataset from local file...")
 
