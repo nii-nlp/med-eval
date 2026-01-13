@@ -64,6 +64,8 @@ class MCQARequestDataset(RequestDataset):
         )
 
     def __task_sepcific_preparation__(self):
+        if len(self.samples) == 0:
+            raise ValueError("No samples provided for MCQA task. The dataset might be empty or unavailable.")
         assert isinstance(self.samples[0], MCQASample)
         self.template_f = MCQATemplate
 
@@ -122,7 +124,16 @@ class MCQARequestDataset(RequestDataset):
 
                 all_token_ids = self.tokenizer(output_text, return_tensors="pt")["input_ids"].squeeze().tolist()
 
+                # Use the difference in token counts to get output tokens
+                # This handles tokenizer boundary issues better
                 output_token_ids = all_token_ids[len(input_token_ids):]
+                
+                # Fallback: if output_token_ids is empty, tokenize option directly
+                if len(output_token_ids) == 0:
+                    output_token_ids = self.tokenizer(option, add_special_tokens=False)["input_ids"]
+                    if len(output_token_ids) == 0:
+                        warnings.warn(f"Option '{option}' tokenizes to empty sequence, using unknown token")
+                        output_token_ids = [self.tokenizer.unk_token_id or 0]
 
                 all_output_token_ids.append(output_token_ids)
 

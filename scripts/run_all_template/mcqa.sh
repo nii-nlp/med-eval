@@ -41,7 +41,7 @@ general_tasks=(
     "medqa"
     "medqa_jp"
     "igakuqa"
-    "igakuqa_en"
+    # "igakuqa_en"
     "mmlu"
     "mmlu_medical"
     "mmlu_medical_jp"

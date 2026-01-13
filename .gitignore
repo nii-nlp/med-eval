@@ -8,6 +8,7 @@ unify_dataset/
 translate_dataset/
 preprocess
 jmed_eval
+external_datasets/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -56,6 +56,9 @@ class MCQAEvaluationPipeline(EvaluationPipeline):
         except AssertionError:
             main_print("Skip this task due to the lack of samples for few-shot learning.")
             return
+        except ValueError as e:
+            main_print(f"Skip this task: {e}")
+            return
         except Exception as e:
             raise e
 
@@ -213,6 +216,11 @@ In default, we don't use this option, but use the exact demonstrations from the 
         samples = pipeline.load_downstream_task(dataset_name=task)
 
         # evaluation starts
+        # Skip if no test samples available
+        if len(samples["test"]) == 0:
+            main_print(f"Skipping task {task} due to empty test set.")
+            continue
+
         if args.use_fake_demo:
             ## Reference: Rethinking the Role of Demonstrations: What Makes In-Context Learning Work? (Min et al., 2022)
             shuffle_test_samples = copy.deepcopy(samples["test"])
@@ -253,6 +261,11 @@ In default, we don't use this option, but use the exact demonstrations from the 
             )
 
         else:
+            # Skip if no test samples available
+            if len(samples["test"]) == 0:
+                main_print(f"Skipping task {task} due to empty test set.")
+                continue
+
             evaluation_result = pipeline.evaluate(
                 samples["test"],
                 demo_samples=samples["train"] if args.num_fewshot > 0 else None,

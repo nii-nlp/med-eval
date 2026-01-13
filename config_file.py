@@ -1,1 +1,1 @@
-DATA_ROOT_DIR="JMedBench"
+DATA_ROOT_DIR="external_datasets"
