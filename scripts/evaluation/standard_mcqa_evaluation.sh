@@ -17,6 +17,7 @@ num_fewshot=${6:-0}
 seed=${7:-42}
 model_max_length=${8:--1}
 use_knn_demo=${9:-False}
+result_csv=${11:-""}
 
 torchrun --nproc_per_node=${N_GPU} \
          --master_port $MASTER_PORT \
@@ -29,7 +30,8 @@ torchrun --nproc_per_node=${N_GPU} \
             --seed ${seed} \
             --model_max_length ${model_max_length} \
             --truncate False \
-            --use_knn_demo ${use_knn_demo}
+            --use_knn_demo ${use_knn_demo} \
+            --result_csv ${result_csv}
 
 
 # bash scripts/evaluation/standard_mcqa_evaluation.sh 8 meta-llama/Llama-2-7b-hf medmcqa,medmcqa_jp,usmleqa,usmleqa_jp,medqa,medqa_jp,mmlu_medical,mmlu_medical_jp,igakuqa,igakuqa_en,jmmlu,jmmlu_medical,mmlu mcqa_with_options 4 0 42 -1 False 2333

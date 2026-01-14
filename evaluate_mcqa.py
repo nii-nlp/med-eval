@@ -197,7 +197,7 @@ In default, we don't use this option, but use the exact demonstrations from the 
 
     if args.model_max_length == -1:
         args.model_max_length = None
-    if args.result_csv is not None:
+    if args.result_csv:
         parent_path = Path(args.result_csv).parent.exists()
         assert parent_path, f"{parent_path} does not exists. Cannot write output."
 

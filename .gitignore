@@ -9,6 +9,7 @@ translate_dataset/
 preprocess
 jmed_eval
 external_datasets/
+scripts/customized/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
