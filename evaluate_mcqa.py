@@ -192,6 +192,8 @@ In default, we don't use this option, but use the exact demonstrations from the 
     parser.add_argument("--truncate", type=strtobool, default=False)
     parser.add_argument("--dump_file", type=str, default=None)
     parser.add_argument("--result_csv", type=str, default=None)
+    parser.add_argument("--use_device_map", type=strtobool, default=False,
+                        help="Use device_map='auto' to distribute model across multiple GPUs (model parallelism)")
 
     args = parser.parse_args()
 

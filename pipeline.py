@@ -44,6 +44,10 @@ class EvaluationPipeline:
             trust_remote_code=True
         )
 
+        # 设置 model_max_length（用于截断）
+        if hasattr(self.args, "model_max_length") and self.args.model_max_length is not None:
+            self.tokenizer.model_max_length = self.args.model_max_length
+
         # pad token
         pad_token_not_exist = self.tokenizer.pad_token_id is None or self.tokenizer.pad_token is None
         if pad_token_not_exist:
@@ -61,15 +65,28 @@ class EvaluationPipeline:
                 use_cache=True
             )
         else:
-            self.model = AutoModelForCausalLM.from_pretrained(
-                model_name_or_path,
-                torch_dtype=getattr(self.model_config, "torch_dtype", None),
-                use_cache=True
-            )
+            # 对于大模型，使用 device_map="auto" 自动分布到多个 GPU
+            use_device_map = getattr(self.args, "use_device_map", False)
+            if use_device_map:
+                self.model = AutoModelForCausalLM.from_pretrained(
+                    model_name_or_path,
+                    torch_dtype=getattr(self.model_config, "torch_dtype", torch.bfloat16),
+                    device_map="auto",
+                    use_cache=True,
+                    trust_remote_code=True
+                )
+                self.device = self.model.device  # 使用模型的设备
+            else:
+                self.model = AutoModelForCausalLM.from_pretrained(
+                    model_name_or_path,
+                    torch_dtype=getattr(self.model_config, "torch_dtype", None),
+                    use_cache=True
+                )
         if pad_token_not_exist:
             self.model.resize_token_embeddings(len(self.tokenizer))
 
-        self.model = self.model.to(self.device)
+        if not getattr(self.args, "use_device_map", False):
+            self.model = self.model.to(self.device)
         self.model.eval()
 
     def __task_specific_preparation__(self):
