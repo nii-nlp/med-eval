@@ -25,7 +25,7 @@ n_gpus_default=$(nvidia-smi -L | wc -l)
 # Arguments
 model_name_or_path=$1
 model_log_dir=$2
-fewshot_size=${3:-1}
+fewshot_size=${3:-0}
 batch_size=${4:-1}
 n_gpus=${5:-$n_gpus_default}
 

@@ -26,6 +26,10 @@ TEMPLATE_SET = {
 
     "mcqa_jp": "質問：{question}\n回答：",
 
+## LLM-v4
+
+    "llm-v4-mcqa": "Q: {question} A: ",
+    "llm-v4-cmcqa": "Q: {context} {question} A: ",
 
 ## Instructed Version
 
@@ -119,8 +123,19 @@ class MCQATemplate(Template):
                 options=option_text
             )
 
+        elif self.template_name in ["llm-v4-mcqa"]:
+            return self.template.format(
+                question=sample["question"] + " Options: " + " ".join(options)
+            )
+        
+        elif self.template_name in ["llm-v4-cmcqa"]:
+            return self.template.format(
+                context=sample["metadata"]["context"],
+                question=sample["question"]
+            )
+
         else:
-            raise NotImplementedError
+            raise NotImplementedError(f"Template {self.template_name} not implemented")
 
     def instantiate_template_full(self, sample):
         if not isinstance(sample, dict):
