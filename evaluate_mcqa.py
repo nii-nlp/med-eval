@@ -1,11 +1,13 @@
 import argparse
 import os
+import time
 from collections import defaultdict
+from datetime import datetime, timezone
 import copy
 import itertools
 import random
 from pathlib import  Path
-from typing import Union, List
+from typing import Union, List, Optional
 import ujson as json
 from distutils.util import strtobool
 import numpy as np
@@ -22,6 +24,114 @@ from tasks.mcqa import MCQASample, MCQARequestDataset
 from data_utils import LMDataCollatorForPerplexity
 from pipeline import EvaluationPipeline
 from templates.jmedbench import UnifiedTemplate
+
+
+def _cuda_indices_from_hf_device_map(model) -> List[int]:
+    """从 device_map 加载的模型上解析实际占用的 CUDA 设备下标。"""
+    hf_map = getattr(model, "hf_device_map", None) or {}
+    indices = set()
+    for v in hf_map.values():
+        if isinstance(v, int) and v >= 0:
+            indices.add(v)
+        elif isinstance(v, str) and v.startswith("cuda:"):
+            try:
+                indices.add(int(v.split(":", 1)[1]))
+            except ValueError:
+                pass
+    return sorted(indices)
+
+
+def _local_gpu_label(pipeline: "MCQAEvaluationPipeline") -> str:
+    dev = pipeline.device
+    if dev.type != "cuda":
+        return ""
+    idx = dev.index if dev.index is not None else torch.cuda.current_device()
+    return f"{idx}: {torch.cuda.get_device_name(idx)}"
+
+
+def get_gpus_used(pipeline: "MCQAEvaluationPipeline") -> List[str]:
+    """
+    本次评估实际用到的 GPU，每项为 "设备下标: 型号名称"。
+    无 CUDA、或纯 CPU 时为 []。
+    """
+    if not torch.cuda.is_available():
+        return []
+
+    use_dm = getattr(pipeline.args, "use_device_map", False)
+    if use_dm:
+        idxs = _cuda_indices_from_hf_device_map(pipeline.model)
+        if idxs:
+            return [f"{i}: {torch.cuda.get_device_name(i)}" for i in idxs]
+        label = _local_gpu_label(pipeline)
+        return [label] if label else []
+
+    if getattr(pipeline, "using_ddp", False) and dist.is_available() and dist.is_initialized():
+        local = _local_gpu_label(pipeline)
+        ws = dist.get_world_size()
+        gathered: List[Optional[str]] = [None] * ws
+        dist.all_gather_object(gathered, local)
+        seen = set()
+        out: List[str] = []
+        for s in gathered:
+            if s and s not in seen:
+                seen.add(s)
+                out.append(s)
+        out.sort(key=lambda x: int(x.split(":", 1)[0]))
+        return out
+
+    label = _local_gpu_label(pipeline)
+    return [label] if label else []
+
+
+def output_as_json(
+    evaluation_results: dict,
+    args: argparse.Namespace,
+    output_file: str,
+    gpus_used: List[str],
+    start_time: float = None,
+    end_time: float = None,
+) -> None:
+    """
+    将评估结果与超参数写入 JSON 文件，便于后续处理。
+
+    结构:
+    - hyperparameters: 本次运行的所有相关超参数
+    - gpus_used: 本次评估占用的 GPU（"下标: 型号" 字符串列表）
+    - results: { 任务名: { 模板名: { accuracy, norm_accuracy } } }
+    - evaluation_start_time / evaluation_end_time / evaluation_duration_seconds: 评估时间信息
+    """
+    hyperparameters = {
+        "seed": args.seed,
+        "model_name_or_path": args.model_name_or_path,
+        "task": args.task,
+        "template_name": args.template_name,
+        "batch_size": args.batch_size,
+        "num_workers": args.num_workers,
+        "num_fewshot": args.num_fewshot,
+        "use_fake_demo": args.use_fake_demo,
+        "use_knn_demo": args.use_knn_demo,
+        "knn_data_file": args.knn_data_file,
+        "knn_data_dir": args.knn_data_dir,
+        "knn_data_template_name": args.knn_data_template_name,
+        "retriever_id": args.retriever_id,
+        "corpus_filename": args.corpus_filename,
+        "model_max_length": args.model_max_length,
+        "truncate": args.truncate,
+        "use_device_map": args.use_device_map,
+    }
+    # 过滤掉值为 None 的字段，避免在 JSON 中写入无意义的配置
+    hyperparameters = {k: v for k, v in hyperparameters.items() if v is not None}
+    output_data = {
+        "hyperparameters": hyperparameters,
+        "gpus_used": gpus_used,
+        "results": dict(evaluation_results),
+    }
+    if start_time is not None and end_time is not None:
+        output_data["evaluation_start_time"] = datetime.fromtimestamp(start_time, tz=timezone.utc).isoformat()
+        output_data["evaluation_end_time"] = datetime.fromtimestamp(end_time, tz=timezone.utc).isoformat()
+        output_data["evaluation_duration_seconds"] = round(end_time - start_time, 2)
+    with open(output_file, "w", encoding="utf-8") as writer:
+        json.dump(output_data, writer, ensure_ascii=False, indent=2)
 
 
 class MCQAEvaluationPipeline(EvaluationPipeline):
@@ -191,7 +301,8 @@ In default, we don't use this option, but use the exact demonstrations from the 
 
     parser.add_argument("--truncate", type=strtobool, default=False)
     parser.add_argument("--dump_file", type=str, default=None)
-    parser.add_argument("--result_csv", type=str, default=None)
+    parser.add_argument("--result_csv", type=str, default=None, help="Deprecated: 建议使用 --result_json 输出 JSON 便于后续处理")
+    parser.add_argument("--result_json", type=str, default=None, help="将超参数与各数据集结果保存为 JSON 文件")
     parser.add_argument("--use_device_map", type=strtobool, default=False,
                         help="Use device_map='auto' to distribute model across multiple GPUs (model parallelism)")
 
@@ -200,8 +311,11 @@ In default, we don't use this option, but use the exact demonstrations from the 
     if args.model_max_length == -1:
         args.model_max_length = None
     if args.result_csv:
-        parent_path = Path(args.result_csv).parent.exists()
-        assert parent_path, f"{parent_path} does not exists. Cannot write output."
+        parent_path = Path(args.result_csv).parent
+        assert parent_path.exists(), f"{parent_path} does not exist. Cannot write output."
+    if args.result_json:
+        parent_path = Path(args.result_json).parent
+        assert parent_path.exists(), f"{parent_path} does not exist. Cannot write output."
 
     pipeline = MCQAEvaluationPipeline(args)
 
@@ -214,6 +328,7 @@ In default, we don't use this option, but use the exact demonstrations from the 
     assert len(tasks) == len(template_names), f"Number of tasks and templates should be the same, but got {len(tasks)} != {len(template_names)}"
 
     evaluation_results = defaultdict(lambda: defaultdict(dict))
+    eval_start_time = time.time()
     for task, template_name in zip(tasks, template_names):
         samples = pipeline.load_downstream_task(dataset_name=task)
 
@@ -278,6 +393,18 @@ In default, we don't use this option, but use the exact demonstrations from the 
             continue
         evaluation_results[task][template_name] = evaluation_result
 
+    eval_end_time = time.time()
     show_pretty_table(evaluation_results)
+    if args.result_json:
+        gpus_used = get_gpus_used(pipeline)
+        if is_main_process():
+            output_as_json(
+                evaluation_results,
+                args,
+                args.result_json,
+                gpus_used=gpus_used,
+                start_time=eval_start_time,
+                end_time=eval_end_time,
+            )
     if args.result_csv:
-        output_as_csv(evaluation_results,args.result_csv)
+        output_as_csv(evaluation_results, args.result_csv)

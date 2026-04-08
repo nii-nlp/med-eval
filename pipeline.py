@@ -53,7 +53,7 @@ class EvaluationPipeline:
         if pad_token_not_exist:
             self.tokenizer.add_special_tokens({"pad_token": "<pad>"})
 
-        self.model_config = AutoConfig.from_pretrained(model_name_or_path)
+        self.model_config = AutoConfig.from_pretrained(model_name_or_path, trust_remote_code=True)
 
         if model_name_or_path in ["meta-llama/Meta-Llama-3-8B", "hfl/llama-3-chinese-8b", "tokyotech-llm/Swallow-7b-hf", "epfl-llm/meditron-7b"]:
             self.model_config.torch_dtype = torch.float16
@@ -61,8 +61,7 @@ class EvaluationPipeline:
         if model_name_or_path in ["bigscience/mt0-small", "bigscience/mt0-xl", "facebook/nllb-200-distilled-600M"]:
             self.model = AutoModelForSeq2SeqLM.from_pretrained(
                 model_name_or_path,
-                torch_dtype=getattr(self.model_config, "torch_dtype", None),
-                use_cache=True
+                dtype=getattr(self.model_config, "torch_dtype", None),
             )
         else:
             # 对于大模型，使用 device_map="auto" 自动分布到多个 GPU
@@ -70,17 +69,16 @@ class EvaluationPipeline:
             if use_device_map:
                 self.model = AutoModelForCausalLM.from_pretrained(
                     model_name_or_path,
-                    torch_dtype=getattr(self.model_config, "torch_dtype", torch.bfloat16),
+                    dtype=getattr(self.model_config, "torch_dtype", torch.bfloat16),
                     device_map="auto",
-                    use_cache=True,
                     trust_remote_code=True
                 )
                 self.device = self.model.device  # 使用模型的设备
             else:
                 self.model = AutoModelForCausalLM.from_pretrained(
                     model_name_or_path,
-                    torch_dtype=getattr(self.model_config, "torch_dtype", None),
-                    use_cache=True
+                    dtype=getattr(self.model_config, "torch_dtype", None),
+                    trust_remote_code=True,
                 )
         if pad_token_not_exist:
             self.model.resize_token_embeddings(len(self.tokenizer))
